@@ -38,27 +38,40 @@ RT_PROGRAM void closest_hit(){
 
 	float r=rnd(current_path_result.seed);
 
-	if(r<pdiff){
-		float u1=rnd(current_path_result.seed);
-		float u2=rnd(current_path_result.seed);
-		float3 dir;
-		optix::cosine_sample_hemisphere(u1, u2, dir);
+	if(r<pdiff+pspec){
 
-		current_path_result.atenuation *= Kd/pdiff;
-		current_path_result.direction = dir;
+		if(r<pdiff){
+			float u1=rnd(current_path_result.seed);
+			float u2=rnd(current_path_result.seed);
+			float3 dir;
+			optix::cosine_sample_hemisphere(u1, u2, dir);
+			optix::Onb onb(shading_normal);
+			onb.inverse_transform(dir);
 
-	}
-	else if(r<pdiff+pspec){
-		float u1=rnd(current_path_result.seed);
-		float u2=rnd(current_path_result.seed);
-		float3 dir;
-		dir.x = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*cosf(M_2_PIf*u2);
-		dir.y = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*sinf(M_2_PIf*u2);
-		dir.z = powf(u1, 1.f/(shininess+1.f));
+			current_path_result.atenuation *= Kd/pdiff;
+			current_path_result.direction = dir;
 
-		current_path_result.atenuation*= ((shininess+2.f)/(shininess+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
-		current_path_result.direction=dir;
+		}
+		else {
+			float u1=rnd(current_path_result.seed);
+			float u2=rnd(current_path_result.seed);
+			float3 dir;
+			dir.x = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*cosf(M_2_PIf*u2);
+			dir.y = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*sinf(M_2_PIf*u2);
+			dir.z = powf(u1, 1.f/(shininess+1.f));
+			optix::Onb onb(optix::reflect(current_ray.direction, shading_normal));
+			onb.inverse_transform(dir);
 
+			float intensity=dot(dir, shading_normal);
+
+			if(intensity>0.f){
+				current_path_result.atenuation*= ((shininess+2.f)/(shininess+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
+				current_path_result.direction=dir;
+			}
+			else{
+				current_path_result.finished=true;
+			}
+		}
 	}
 	else{
 		current_path_result.finished=true;
