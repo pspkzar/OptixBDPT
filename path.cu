@@ -69,7 +69,7 @@ RT_PROGRAM void closest_hit(){
 			onb.inverse_transform(dir);
 
 			float intensity=optix::dot(dir, shading_normal);
-
+			//verify if sampled direction is above surface
 			if(intensity>0.f){
 				current_path_result.atenuation*= ((shininess+2.f)/(shininess+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
 				current_path_result.direction=dir;
