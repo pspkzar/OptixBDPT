@@ -19,6 +19,7 @@ struct PathResult{
 	float4 atenuation;
 	float3 position;
 	float3 direction;
+	unsigned int depth;
 	unsigned int seed;
 	bool count_emissive;
 	bool finished;
@@ -32,14 +33,18 @@ __device__ __inline__ void calc_direct_light(){
 }
 
 RT_PROGRAM void closest_hit(){
+	//because we calculate direct lighting in every point of the path,
+	//when first diffuse material is hit we stop counting emmisive contributions
 	current_path_result.count_emissive=false;
+	//calculate diffuse and specular probabilities.
 	float pdiff=(Kd.x+Kd.y+Kd.z)*0.33333333333333333333333333333f;
 	float pspec=(Ks.x+Ks.y+Ks.z)*0.33333333333333333333333333333f;
+	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(shininess+2.f)/(shininess+1.f));
 
+	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
-
 	if(r<pdiff+pspec){
-
+		//select diffuse sample
 		if(r<pdiff){
 			float u1=rnd(current_path_result.seed);
 			float u2=rnd(current_path_result.seed);
@@ -52,6 +57,7 @@ RT_PROGRAM void closest_hit(){
 			current_path_result.direction = dir;
 
 		}
+		//select specular sample
 		else {
 			float u1=rnd(current_path_result.seed);
 			float u2=rnd(current_path_result.seed);
@@ -62,7 +68,7 @@ RT_PROGRAM void closest_hit(){
 			optix::Onb onb(optix::reflect(current_ray.direction, shading_normal));
 			onb.inverse_transform(dir);
 
-			float intensity=dot(dir, shading_normal);
+			float intensity=optix::dot(dir, shading_normal);
 
 			if(intensity>0.f){
 				current_path_result.atenuation*= ((shininess+2.f)/(shininess+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
@@ -73,6 +79,7 @@ RT_PROGRAM void closest_hit(){
 			}
 		}
 	}
+	//consider that photon is absorbed and finish path
 	else{
 		current_path_result.finished=true;
 	}
