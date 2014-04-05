@@ -38,6 +38,10 @@
 							<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.GLDErrorParser" id="nvcc.linker.base.1890371075" name="NVCC Linker" superClass="nvcc.linker.base">
 								<option id="nvcc.linker.option.libs.1477566499" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="optix"/>
+									<listOptionValue builtIn="false" value="GL"/>
+									<listOptionValue builtIn="false" value="GLU"/>
+									<listOptionValue builtIn="false" value="IL"/>
+									<listOptionValue builtIn="false" value="assimp"/>
 									<listOptionValue builtIn="false" value="optixu"/>
 								</option>
 								<option id="nvcc.linker.option.paths.581283031" name="Library search path (-L)" superClass="nvcc.linker.option.paths" valueType="libPaths">
@@ -54,6 +58,22 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.379051078" name="commonStructs.h" rcbsApplicability="disable" resourcePath="commonStructs.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1581551668" name="random.h" rcbsApplicability="disable" resourcePath="random.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1473611542" name="optix_context.h" rcbsApplicability="disable" resourcePath="optix_context.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.2000777121" name="material.h" rcbsApplicability="disable" resourcePath="material.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1875255759" name="mesh.h" rcbsApplicability="disable" resourcePath="mesh.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.372417010" name="optix_sphere_light.cu" rcbsApplicability="disable" resourcePath="optix_sphere_light.cu" toolsToInvoke="nvcc.compiler.base.971005232.1498163142">
+						<tool id="nvcc.compiler.base.971005232.1498163142" name="NVCC Compiler" superClass="nvcc.compiler.base.971005232">
+							<option id="nvcc.compiler.modules.1651971647" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
+								<listOptionValue builtIn="false" value="2"/>
+							</option>
+							<option id="nvcc.compiler.isintarget.2035753637" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
+							<inputType id="nvcc.compiler.input.cu.1307025482" superClass="nvcc.compiler.input.cu"/>
+							<inputType id="nvcc.compiler.input.cpp.1018193556" superClass="nvcc.compiler.input.cpp"/>
+							<inputType id="nvcc.compiler.input.c.5656187" superClass="nvcc.compiler.input.c"/>
+						</tool>
+					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1598352287" name="path.cu" rcbsApplicability="disable" resourcePath="path.cu" toolsToInvoke="nvcc.compiler.base.971005232.147218463">
 						<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.971005232.147218463" name="NVCC Compiler" superClass="nvcc.compiler.base.971005232">
 							<option id="nvcc.compiler.modules.945432672" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
@@ -65,8 +85,9 @@
 							<inputType id="nvcc.compiler.input.c.1831386140" superClass="nvcc.compiler.input.c"/>
 						</tool>
 					</fileInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1340583634" name="OptixContext.h" rcbsApplicability="disable" resourcePath="OptixContext.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="mesh.h|material.h|OptixContext.h|random.h|optix_context.h|commonStructs.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -79,6 +100,9 @@
 					<ptx major="3" minor="0"/>
 				</module>
 				<editor-arch major="3" minor="0"/>
+				<module devicelink="false" id="2" path="optix_sphere_light.ptx" type="ptx">
+					<ptx major="3" minor="0"/>
+				</module>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
@@ -102,7 +126,7 @@
 					<folderInfo id="com.nvidia.cuda.ide.configuration.release.1460815459." name="/" resourcePath="">
 						<toolChain errorParsers="" id="com.nvidia.cuda.ide.toolchain.exe.release.209275678" name="CUDA Toolkit 6.0" nonInternalBuilderId="com.nvidia.cuda.ide.builder" resourceTypeBasedDiscovery="true" superClass="com.nvidia.cuda.ide.toolchain.exe.release">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.1190816524" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
-							<builder buildPath="${workspace_loc:/OptixBDPT}/Release" errorParsers="org.eclipse.cdt.core.GmakeErrorParser" id="com.nvidia.cuda.ide.builder.947846258" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" name="CUDA Toolkit 6.0 Builder" parallelBuildOn="true" parallelizationNumber="optimal" stopOnErr="false" superClass="com.nvidia.cuda.ide.builder"/>
+							<builder buildPath="${workspace_loc:/OptixBDPT}/Release" errorParsers="org.eclipse.cdt.core.GmakeErrorParser" id="com.nvidia.cuda.ide.builder.947846258" incrementalBuildTarget="all path.ptx" keepEnvironmentInBuildfile="false" name="CUDA Toolkit 6.0 Builder" parallelBuildOn="true" parallelizationNumber="optimal" stopOnErr="false" superClass="com.nvidia.cuda.ide.builder"/>
 							<tool command="nvcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX} ${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.VCErrorParser;nvcc.errorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.770353483" name="NVCC Compiler" superClass="nvcc.compiler.base">
 								<option id="nvcc.compiler.deviceDebug.173874517" name="Generate device debug information (-G)" superClass="nvcc.compiler.deviceDebug"/>
 								<option id="nvcc.compiler.option.level.1612579701" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level"/>
@@ -122,6 +146,10 @@
 								</option>
 								<option id="nvcc.linker.option.libs.1624299196" name="Libraries (-l)" superClass="nvcc.linker.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="optix"/>
+									<listOptionValue builtIn="false" value="GL"/>
+									<listOptionValue builtIn="false" value="GLU"/>
+									<listOptionValue builtIn="false" value="IL"/>
+									<listOptionValue builtIn="false" value="assimp"/>
 									<listOptionValue builtIn="false" value="optixu"/>
 								</option>
 								<inputType id="nvcc.linker.input.2003879268" superClass="nvcc.linker.input">
@@ -135,6 +163,22 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1968403045" name="commonStructs.h" rcbsApplicability="disable" resourcePath="commonStructs.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.2115162416" name="random.h" rcbsApplicability="disable" resourcePath="random.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.394630731" name="optix_context.h" rcbsApplicability="disable" resourcePath="optix_context.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1641739330" name="material.h" rcbsApplicability="disable" resourcePath="material.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1347830988" name="mesh.h" rcbsApplicability="disable" resourcePath="mesh.h" toolsToInvoke=""/>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1240080440" name="optix_sphere_light.cu" rcbsApplicability="disable" resourcePath="optix_sphere_light.cu" toolsToInvoke="nvcc.compiler.base.770353483.1725600831">
+						<tool id="nvcc.compiler.base.770353483.1725600831" name="NVCC Compiler" superClass="nvcc.compiler.base.770353483">
+							<option id="nvcc.compiler.modules.1790571344" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
+								<listOptionValue builtIn="false" value="2"/>
+							</option>
+							<option id="nvcc.compiler.isintarget.144076254" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
+							<inputType id="nvcc.compiler.input.cu.35193355" superClass="nvcc.compiler.input.cu"/>
+							<inputType id="nvcc.compiler.input.cpp.1968489421" superClass="nvcc.compiler.input.cpp"/>
+							<inputType id="nvcc.compiler.input.c.1104223747" superClass="nvcc.compiler.input.c"/>
+						</tool>
+					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.363801491" name="path.cu" rcbsApplicability="disable" resourcePath="path.cu" toolsToInvoke="nvcc.compiler.base.770353483.1215956839">
 						<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.770353483.1215956839" name="NVCC Compiler" superClass="nvcc.compiler.base.770353483">
 							<option id="nvcc.compiler.modules.149120238" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
@@ -146,8 +190,9 @@
 							<inputType id="nvcc.compiler.input.c.1892012646" superClass="nvcc.compiler.input.c"/>
 						</tool>
 					</fileInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1568415422" name="OptixContext.h" rcbsApplicability="disable" resourcePath="OptixContext.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="mesh.h|material.h|OptixContext.h|random.h|optix_context.h|commonStructs.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -160,6 +205,10 @@
 					<ptx major="3" minor="0"/>
 				</module>
 				<editor-arch major="3" minor="0"/>
+				<module id="2" path="optix_sphere_light.ptx" type="ptx">
+					<sass major="3" minor="0"/>
+					<ptx major="3" minor="0"/>
+				</module>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>

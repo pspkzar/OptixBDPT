@@ -1,18 +1,4 @@
-#include <optix_world.h>
-#include "random.h"
-
-rtDeclareVariable(float4, Kd, , );
-rtDeclareVariable(float4, Ks, , );
-rtDeclareVariable(float, shininess, , );
-
-
-// Intersection attributes
-rtDeclareVariable(float3, pos, attribute pos, );
-rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
-rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
-rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
-//rtDeclareVariable(float3, tangent, attribute tangent, );
-//rtDeclareVariable(float3, bitangent, attribute bitangent, );
+#include "optix_context.h"
 
 struct PathResult{
 	float4 result;
@@ -28,9 +14,14 @@ struct PathResult{
 rtDeclareVariable(PathResult, current_path_result, rtPayload, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
 
+rtDeclareVariable(float4, Kd, , );
+rtDeclareVariable(float4, Ks, , );
+rtDeclareVariable(float, shininess, , );
+
 __device__ __inline__ void calc_direct_light(){
 
 }
+
 
 RT_PROGRAM void closest_hit(){
 	//because we calculate direct lighting in every point of the path,
@@ -40,6 +31,8 @@ RT_PROGRAM void closest_hit(){
 	float pdiff=(Kd.x+Kd.y+Kd.z)*0.33333333333333333333333333333f;
 	float pspec=(Ks.x+Ks.y+Ks.z)*0.33333333333333333333333333333f;
 	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(shininess+2.f)/(shininess+1.f));
+
+	int * a = (int*) malloc(sizeof(int));
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
