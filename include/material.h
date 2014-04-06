@@ -1,10 +1,3 @@
-/*
- * material.h
- *
- *  Created on: 5 de Abr de 2014
- *      Author: cesar
- */
-
 #ifndef MATERIAL_H_
 #define MATERIAL_H_
 

@@ -1,10 +1,3 @@
-/*
- * optix_context.h
- *
- *  Created on: 1 de Abr de 2014
- *      Author: cesar
- */
-
 #ifndef OPTIX_CONTEXT_H_
 #define OPTIX_CONTEXT_H_
 

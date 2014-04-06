@@ -1,4 +1,3 @@
-
 #ifndef COMMONSTRUCTS_H_
 #define COMMONSTRUCTS_H_
 

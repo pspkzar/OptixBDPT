@@ -1,10 +1,3 @@
-/*
- * mesh.h
- *
- *  Created on: 5 de Abr de 2014
- *      Author: cesar
- */
-
 #ifndef MESH_H_
 #define MESH_H_
 

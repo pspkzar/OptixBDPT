@@ -1,10 +1,3 @@
-/*
- * OptixContext.cpp
- *
- *  Created on: 5 de Abr de 2014
- *      Author: cesar
- */
-
 #include "OptixContext.h"
 #include <assimp/cimport.h>
 #include <assimp/postprocess.h>

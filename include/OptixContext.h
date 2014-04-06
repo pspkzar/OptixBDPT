@@ -1,10 +1,3 @@
-/*
- * OptixContext.h
- *
- *  Created on: 5 de Abr de 2014
- *      Author: cesar
- */
-
 #ifndef OPTIXCONTEXT_H_
 #define OPTIXCONTEXT_H_
 
@@ -36,6 +29,9 @@ public:
 
 	void setBoundingBoxProgram(std::string file, std::string program);
 	void setIntersectionProgram(std::string file, std::string program);
+
+	optix::Context getContext() {return _context;}
+	optix::GeometryGroup getMeshes() {return _meshes;}
 
 private:
 	void loadMaterials();
