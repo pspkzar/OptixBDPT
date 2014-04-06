@@ -9,6 +9,7 @@
 #define MATERIAL_H_
 
 #include <optix_world.h>
+#include "attributes.h"
 
 rtDeclareVariable(float4, Kd, , );
 rtDeclareVariable(float4, Ks, , );

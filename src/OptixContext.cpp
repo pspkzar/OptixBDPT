@@ -30,6 +30,8 @@ OptixContext::OptixContext(string scene_name) {
 	_context = Context::create();
 	loadMaterials();
 	loadMeshes();
+
+	aiReleaseImport(_scene);
 }
 
 OptixContext::~OptixContext() {
@@ -357,3 +359,55 @@ void OptixContext::loadMeshes() {
 	}
 
 }
+
+void OptixContext::setRayTypeCount(int nray_types) {
+	_context->setRayTypeCount(nray_types);
+}
+
+void OptixContext::setClosestHitProgram(int ray_type, string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	for(map<string, Material>::iterator i=_materials.begin(); i!=_materials.end(); i++){
+		i->second->setClosestHitProgram(ray_type, p);
+	}
+}
+
+void OptixContext::setAnyHitProgram(int ray_type, std::string file, std::string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	for(map<string, Material>::iterator i=_materials.begin(); i!=_materials.end(); i++){
+		i->second->setAnyHitProgram(ray_type, p);
+	}
+}
+
+
+void OptixContext::setMaterialClosestHitProgram(string material, int ray_type, string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	Material m = _materials[material];
+	m->setClosestHitProgram(ray_type, p);
+}
+
+void OptixContext::setMaterialAnyHitProgram(string material, int ray_type, string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	Material m = _materials[material];
+	m->setAnyHitProgram(ray_type, p);
+}
+
+void OptixContext::setBoundingBoxProgram(string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	for(int i=0; i<_meshes->getChildCount(); i++){
+		_meshes->getChild(i)->getGeometry()->setBoundingBoxProgram(p);
+	}
+}
+
+void OptixContext::setIntersectionProgram(string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	for(int i=0; i<_meshes->getChildCount(); i++){
+		_meshes->getChild(i)->getGeometry()->setIntersectionProgram(p);
+	}
+}
+

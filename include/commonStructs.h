@@ -1,9 +1,3 @@
-/*
- * commonStructs.h
- *
- *  Created on: 1 de Abr de 2014
- *      Author: cesar
- */
 
 #ifndef COMMONSTRUCTS_H_
 #define COMMONSTRUCTS_H_
@@ -17,8 +11,9 @@ enum RayTypes{
 };
 
 struct SphereLight{
-	float4 pos;
-	float4 color;
+	optix::float4 pos;
+	optix::float4 color;
 };
+
 
 #endif /* COMMONSTRUCTS_H_ */

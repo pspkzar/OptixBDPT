@@ -27,6 +27,16 @@ public:
 	optix::Acceleration newSBVH();
 	optix::Acceleration newBVH();
 
+	void setRayTypeCount(int nray_types);
+	void setClosestHitProgram(int ray_type, std::string file, std::string program);
+	void setAnyHitProgram(int ray_type, std::string file, std::string program);
+
+	void setMaterialClosestHitProgram(std::string material, int ray_type, std::string file, std::string program);
+	void setMaterialAnyHitProgram(std::string material, int ray_type, std::string file, std::string program);
+
+	void setBoundingBoxProgram(std::string file, std::string program);
+	void setIntersectionProgram(std::string file, std::string program);
+
 private:
 	void loadMaterials();
 	void loadMeshes();

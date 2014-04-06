@@ -1,4 +1,4 @@
-#include "optix_context.h"
+#include <optix_world.h>
 
 struct PathResult{
 	float4 result;
@@ -12,15 +12,12 @@ struct PathResult{
 };
 
 rtDeclareVariable(PathResult, current_path_result, rtPayload, );
-rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
-
-rtDeclareVariable(float4, Kd, , );
-rtDeclareVariable(float4, Ks, , );
-rtDeclareVariable(float, shininess, , );
 
 __device__ __inline__ void calc_direct_light(){
 
 }
+
+#include "material.h"
 
 
 RT_PROGRAM void closest_hit(){
@@ -30,7 +27,7 @@ RT_PROGRAM void closest_hit(){
 	//calculate diffuse and specular probabilities.
 	float pdiff=(Kd.x+Kd.y+Kd.z)*0.33333333333333333333333333333f;
 	float pspec=(Ks.x+Ks.y+Ks.z)*0.33333333333333333333333333333f;
-	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(shininess+2.f)/(shininess+1.f));
+	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(Ns+2.f)/(Ns+1.f));
 
 	int * a = (int*) malloc(sizeof(int));
 
@@ -55,16 +52,16 @@ RT_PROGRAM void closest_hit(){
 			float u1=rnd(current_path_result.seed);
 			float u2=rnd(current_path_result.seed);
 			float3 dir;
-			dir.x = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*cosf(M_2_PIf*u2);
-			dir.y = sqrtf(1-powf(u1, 2.f/(shininess+1.f)))*sinf(M_2_PIf*u2);
-			dir.z = powf(u1, 1.f/(shininess+1.f));
+			dir.x = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*cosf(M_2_PIf*u2);
+			dir.y = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*sinf(M_2_PIf*u2);
+			dir.z = powf(u1, 1.f/(Ns+1.f));
 			optix::Onb onb(optix::reflect(current_ray.direction, shading_normal));
 			onb.inverse_transform(dir);
 
 			float intensity=optix::dot(dir, shading_normal);
 			//verify if sampled direction is above surface
 			if(intensity>0.f){
-				current_path_result.atenuation*= ((shininess+2.f)/(shininess+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
+				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
 				current_path_result.direction=dir;
 			}
 			else{

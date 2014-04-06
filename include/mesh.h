@@ -9,18 +9,16 @@
 #define MESH_H_
 
 #include <optix_world.h>
-#include "optix_context.h"
+#include "attributes.h"
 
 rtBuffer<int3>index_buffer;
 rtBuffer<float3>vertex_buffer;
 rtBuffer<float3>normal_buffer;
 
 rtBuffer<float2>texCoord_buffer;
-//rtDeclareVariable(bool, hasTexCoord, , );
 
 rtBuffer<float3>tangent_buffer;
 rtBuffer<float3>bitangent_buffer;
-//rtDeclareVariable(bool, hasTangents, , );
 
 
 #endif /* MESH_H_ */
