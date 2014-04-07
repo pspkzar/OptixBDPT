@@ -9,10 +9,6 @@ enum RayTypes{
 	RAY_TYPE_COUNT
 };
 
-struct SphereLight{
-	optix::float4 pos;
-	optix::float4 color;
-};
 
 
 #endif /* COMMONSTRUCTS_H_ */

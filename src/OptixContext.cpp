@@ -140,7 +140,6 @@ TextureSampler OptixContext::emptyTextureRGBA() {
 }
 
 
-
 TextureSampler OptixContext::emptyTextureLum() {
 
 	TextureSampler tex = _context->createTextureSampler();
@@ -402,5 +401,12 @@ void OptixContext::setIntersectionProgram(string file, string program) {
 	for(int i=0; i<_meshes->getChildCount(); i++){
 		_meshes->getChild(i)->getGeometry()->setIntersectionProgram(p);
 	}
+}
+
+
+void OptixContext::setMissProgram(int ray_type, string file, string program) {
+	Program p = _context->createProgramFromPTXFile(file, program);
+	p->validate();
+	_context->setMissProgram(ray_type, p);
 }
 

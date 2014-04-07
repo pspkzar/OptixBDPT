@@ -27,6 +27,8 @@ public:
 	void setMaterialClosestHitProgram(std::string material, int ray_type, std::string file, std::string program);
 	void setMaterialAnyHitProgram(std::string material, int ray_type, std::string file, std::string program);
 
+	void setMissProgram(int ray_type, std::string file, std::string program);
+
 	void setBoundingBoxProgram(std::string file, std::string program);
 	void setIntersectionProgram(std::string file, std::string program);
 

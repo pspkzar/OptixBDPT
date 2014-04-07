@@ -165,3 +165,17 @@ RT_PROGRAM void closest_hit(){
 	}
 
 }
+
+RT_PROGRAM void any_hit(){
+	float4 color=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
+	if(color.w == 0.f) rtIgnoreIntersection();
+}
+
+RT_PROGRAM void miss(){
+	current_path_result.finished = true;
+}
+
+
+
+
+
