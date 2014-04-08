@@ -20,6 +20,8 @@ void reshape(int nw, int nh){
 	glViewport(0, 0, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
 	output->setSize(w, h);
+	frame=1;
+	optix_context["frame"]->setInt(frame);
 }
 
 void renderScene(){
@@ -27,7 +29,7 @@ void renderScene(){
 	optix_context->launch(0, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
 	void *pixels=output->map();
-	glDrawPixels(w, h, GL_RGBA, GL_FLAT, pixels);
+	glDrawPixels(w, h, GL_RGBA, GL_FLOAT, pixels);
 	output->unmap();
 	optix_context["frame"]->setInt(++frame);
 	glutSwapBuffers();
@@ -61,6 +63,18 @@ int main(int argc, char **argv){
 	Program path_miss = oc->createProgramFromPTXFile(app_loc+"path.ptx", "path_miss");
 	oc->setMissProgram(PathRay, path_miss);
 
+	SphereLight lights[1];
+	lights[0].color=make_float4(1.f);
+	lights[0].pos=make_float4(0.f, 10.f, 0.f, 0.5f);
+
+	SphereLightLoader l_loader(lights, 1, oc);
+	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));
+	l_loader.light_geom->setIntersectionProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_intersect"));
+
+	l_loader.light_mat->setClosestHitProgram(PathRay, oc->createProgramFromPTXFile(app_loc+"path.ptx", "light_shading" ));
+
+	l_loader.light_mat->setAnyHitProgram(ShadowRay, oc->createProgramFromPTXFile(app_loc+"path.ptx", "shadow_probe_light" ));
+
 	Program camera = oc->createProgramFromPTXFile(app_loc+"path.ptx", "camera");
 	Program exception = oc->createProgramFromPTXFile(app_loc+"path.ptx", "exception");
 	oc->setEntryPointCount(1);
@@ -69,14 +83,27 @@ int main(int argc, char **argv){
 
 	oc["frame"]->setInt(frame);
 
-	Buffer output = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT4, w, h);
+	Buffer output = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, w, h);
 	oc["output"]->set(output);
 
-	//TODO set lights and camera variables
+	//TODO set camera variables
+	oc["eye"]->setFloat(0.f, 5.f, 0.f);
+	oc["U"]->setFloat(1.f, 0.f, 0.f);
+	oc["V"]->setFloat(0.f, 1.f, 0.f);
+	oc["W"]->setFloat(0.f, 0.f, -1.f);
 
-
-	oc->setStackSize(5000);
+	oc->setStackSize(10000);
 	oc->setPrintEnabled(true);
+
+	Group g = oc->createGroup();
+	g->setChildCount(2);
+	g->setChild(0, c.getMeshes());
+	g->setChild(1, l_loader.light_group);
+	g->setAcceleration(oc->createAcceleration("NoAccel","NoAccel"));
+
+	oc["top_object"]->set(g);
+
+	oc->validate();
 
 	optix_context=oc;
 
@@ -94,5 +121,7 @@ int main(int argc, char **argv){
 	//TODO keyboard and mouse funcions to allow interactivity
 	//glutKeyboardFunc(keyboard);
 	glutIdleFunc(renderScene);
+
+	glutMainLoop();
 	return 0;
 }

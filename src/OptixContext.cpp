@@ -49,7 +49,7 @@ TextureSampler OptixContext::loadTextureRGBA(string &file) {
 
 	ILboolean success = ilLoadImage(file.c_str());
 	if(success){
-		ilConvertImage(IL_RGB, IL_UNSIGNED_BYTE);
+		ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
 		int w=ilGetInteger(IL_IMAGE_WIDTH);
 		int h=ilGetInteger(IL_IMAGE_HEIGHT);
 		Buffer tex_buffer = _context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_BYTE4, w, h);

@@ -37,13 +37,13 @@ rtDeclareVariable(float3, U, , );
 rtDeclareVariable(float3, V, , );
 rtDeclareVariable(float3, W, , );
 //lens (for depth of field)
-rtDeclareVariable(float, lens_radius, , );
-rtDeclareVariable(float, focal_dist, , );
+rtDeclareVariable(float, lens_radius, , )=0.f;
+rtDeclareVariable(float, focal_dist, , )=0.f;
 
 //frame number to make sure result is different every frame
 rtDeclareVariable(int, frame, , );
 //samples for stratified sampling
-rtDeclareVariable(int, sqrt_num_samples, , )=2;
+rtDeclareVariable(int, sqrt_num_samples, , )=1;
 
 //output buffer
 rtBuffer<float4, 2> output;
@@ -80,7 +80,7 @@ RT_PROGRAM void camera(){
 
 		for(;;){
 
-			Ray ray = optix::make_Ray(ray_origin, ray_direction, PathRay, 0.001, RT_DEFAULT_MAX);
+			Ray ray = optix::make_Ray(ray_origin, ray_direction, PathRay, 0.1, RT_DEFAULT_MAX);
 			rtTrace(top_object, ray, ray_result);
 
 			if(ray_result.finished)
@@ -111,6 +111,7 @@ RT_PROGRAM void camera(){
 }
 
 RT_PROGRAM void exception(){
+	//output[launch_index]=make_float4(1.f);
 	rtPrintExceptionDetails();
 }
 
@@ -127,6 +128,11 @@ __device__ __inline__ void calc_direct_light(){
 RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,
 	//when first diffuse material is hit we stop counting emmisive contributions
+	current_path_result.result=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
+	current_path_result.finished=true;
+
+	return;
+
 	current_path_result.count_emissive=false;
 	//calculate diffuse and specular probabilities.
 	float pdiff=(Kd.x+Kd.y+Kd.z)*0.33333333333333333333333333333f;
@@ -193,6 +199,14 @@ RT_PROGRAM void shadow_probe(){
 	}
 }
 
+RT_PROGRAM void light_shading(){
+	if(current_path_result.count_emissive) current_path_result.result += light_color * current_path_result.atenuation;
+	current_path_result.finished=true;
+}
 
+RT_PROGRAM void shadow_probe_light(){
+	current_shadow_result.in_shadow=true;
+	rtTerminateRay();
+}
 
 
