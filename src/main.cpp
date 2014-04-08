@@ -11,19 +11,25 @@ using namespace optix;
 using namespace std;
 
 int w = 200, h=200;
+int frame=1;
 Context optix_context;
 
 void reshape(int nw, int nh){
-	//TODO reshape buffer and dimensions
+	w=nw;
+	h=nh;
+	glViewport(0, 0, w, h);
+	Buffer output = optix_context["output"]->getBuffer();
+	output->setSize(w, h);
 }
 
 void renderScene(){
+	glClear(GL_COLOR_BUFFER_BIT);
 	optix_context->launch(0, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
 	void *pixels=output->map();
 	glDrawPixels(w, h, GL_RGBA, GL_FLAT, pixels);
 	output->unmap();
-	//TODO update frame number
+	optix_context["frame"]->setInt(++frame);
 	glutSwapBuffers();
 }
 
@@ -61,11 +67,18 @@ int main(int argc, char **argv){
 	oc->setRayGenerationProgram(0, camera);
 	oc->setExceptionProgram(0, exception);
 
+	oc["frame"]->setInt(frame);
+
+	Buffer output = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT4, w, h);
+	oc["output"]->set(output);
+
 	//TODO set lights and camera variables
 
 
 	oc->setStackSize(5000);
 	oc->setPrintEnabled(true);
+
+	optix_context=oc;
 
 	//init glut
 	glutInit(&argc, argv);
