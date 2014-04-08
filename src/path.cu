@@ -27,9 +27,9 @@ rtDeclareVariable(uint2, launch_dim,   rtLaunchDim, );
 
 //camera properties
 rtDeclareVariable(float3, eye, , );
-rtDeclareVariable(float3, look, , );
-rtDeclareVariable(float3, up, , );
-rtDeclareVariable(float3, right, , );
+rtDeclareVariable(float3, U, , );
+rtDeclareVariable(float3, V, , );
+rtDeclareVariable(float3, W, , );
 //lens (for depth of field
 rtDeclareVariable(float, lens_radius, , );
 rtDeclareVariable(float, focal_dist, , );
@@ -62,7 +62,7 @@ RT_PROGRAM void camera(){
 		float2 jitter = make_float2(x-rnd(seed), y-rnd(seed));
 		float2 d = pixel + jitter*jitter_scale;
 		float3 ray_origin = eye;
-		float3 ray_direction = normalize(d.x * right + d.y * up + look);
+		float3 ray_direction = normalize(d.x * U + d.y * V + W);
 
 		PathResult ray_result;
 		ray_result.atenuation=make_float4(1.f);
@@ -112,7 +112,7 @@ __device__ __inline__ void calc_direct_light(){
 #include "material.h"
 
 
-RT_PROGRAM void closest_hit(){
+RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,
 	//when first diffuse material is hit we stop counting emmisive contributions
 	current_path_result.count_emissive=false;
@@ -166,16 +166,18 @@ RT_PROGRAM void closest_hit(){
 
 }
 
-RT_PROGRAM void any_hit(){
+RT_PROGRAM void path_ignore_alpha(){
 	float4 color=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
 	if(color.w == 0.f) rtIgnoreIntersection();
 }
 
-RT_PROGRAM void miss(){
+RT_PROGRAM void path_miss(){
 	current_path_result.finished = true;
 }
 
-
+RT_PROGRAM void exception(){
+	rtPrintExceptionDetails();
+}
 
 
 

@@ -404,9 +404,3 @@ void OptixContext::setIntersectionProgram(string file, string program) {
 }
 
 
-void OptixContext::setMissProgram(int ray_type, string file, string program) {
-	Program p = _context->createProgramFromPTXFile(file, program);
-	p->validate();
-	_context->setMissProgram(ray_type, p);
-}
-
