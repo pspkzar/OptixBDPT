@@ -7,7 +7,7 @@
 #include <assimp/scene.h>
 
 #include <optix_world.h>
-#include <optixu/optixpp.h>
+#include <optixu/optixpp_namespace.h>
 
 class OptixContext {
 public:

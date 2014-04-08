@@ -19,9 +19,11 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
+//ray payloads
 rtDeclareVariable(PathResult, current_path_result, rtPayload, );
 rtDeclareVariable(ShadowResult, current_shadow_result, rtPayload, );
 
+//kernel dimensions
 rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 rtDeclareVariable(uint2, launch_dim,   rtLaunchDim, );
 
@@ -30,7 +32,7 @@ rtDeclareVariable(float3, eye, , );
 rtDeclareVariable(float3, U, , );
 rtDeclareVariable(float3, V, , );
 rtDeclareVariable(float3, W, , );
-//lens (for depth of field
+//lens (for depth of field)
 rtDeclareVariable(float, lens_radius, , );
 rtDeclareVariable(float, focal_dist, , );
 
@@ -104,13 +106,19 @@ RT_PROGRAM void camera(){
 
 }
 
+RT_PROGRAM void exception(){
+	rtPrintExceptionDetails();
+}
 
-__device__ __inline__ void calc_direct_light(){
-
+RT_PROGRAM void path_miss(){
+	current_path_result.finished = true;
 }
 
 #include "material.h"
 
+__device__ __inline__ void calc_direct_light(){
+
+}
 
 RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,
@@ -171,13 +179,16 @@ RT_PROGRAM void path_ignore_alpha(){
 	if(color.w == 0.f) rtIgnoreIntersection();
 }
 
-RT_PROGRAM void path_miss(){
-	current_path_result.finished = true;
+
+RT_PROGRAM void shadow_probe(){
+	float4 color=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
+	if(color.w == 0.f) rtIgnoreIntersection();
+	else{
+		current_shadow_result.in_shadow=true;
+		rtTerminateRay();
+	}
 }
 
-RT_PROGRAM void exception(){
-	rtPrintExceptionDetails();
-}
 
 
 
