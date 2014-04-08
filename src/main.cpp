@@ -2,7 +2,7 @@
 #include <optixu/optixpp_namespace.h>
 #include "commonStructs.h"
 #include "OptixContext.h"
-
+#include "SphereLightLoader.h"
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>

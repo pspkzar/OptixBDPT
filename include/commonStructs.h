@@ -2,6 +2,7 @@
 #define COMMONSTRUCTS_H_
 
 #include <optix_world.h>
+#include "sphere_light_common.h"
 
 enum RayTypes{
 	PathRay,

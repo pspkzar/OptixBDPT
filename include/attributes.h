@@ -11,7 +11,6 @@ rtDeclareVariable(float2, texCoord, attribute texCoord, );
 rtDeclareVariable(float3, tangent, attribute tangent, );
 rtDeclareVariable(float3, bitangent, attribute bitangent, );
 
-rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
-rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
+
 
 #endif /* OPTIX_CONTEXT_H_ */

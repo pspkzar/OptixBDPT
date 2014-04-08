@@ -1,6 +1,7 @@
 #include <optix_world.h>
 #include "commonStructs.h"
 #include "random.h"
+#include "sphere_light.h"
 
 using namespace optix;
 
@@ -18,6 +19,9 @@ struct PathResult{
 struct ShadowResult{
 	bool in_shadow;
 };
+
+rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
+rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
 
 //ray payloads
 rtDeclareVariable(PathResult, current_path_result, rtPayload, );

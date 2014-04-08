@@ -1,6 +1,9 @@
 #include <optix_world.h>
 #include "mesh.h"
 
+rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
+rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
+
 RT_PROGRAM void intersectMesh(int primIdx){
 	//get indices
 	int3 id=index_buffer[primIdx];

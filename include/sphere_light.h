@@ -1,11 +1,20 @@
+/*
+ * sphere_light.h
+ *
+ *  Created on: 8 de Abr de 2014
+ *      Author: cesar
+ */
+
 #ifndef SPHERE_LIGHT_H_
 #define SPHERE_LIGHT_H_
 
-struct SphereLight{
-	optix::float4 pos;
-	optix::float4 color;
-};
+#include <optix_world.h>
 
+#include "sphere_light_common.h"
+
+rtBuffer<SphereLight> lights;
+
+rtDeclareVariable(float4, light_color, attribute light_color, );
 
 
 #endif /* SPHERE_LIGHT_H_ */
