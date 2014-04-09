@@ -181,8 +181,9 @@ void OptixContext::loadMaterials() {
 		aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
 		optix_mat["Kd"]->setFloat(diffuse.r, diffuse.b, diffuse.g, diffuse.a);
 
+
 		aiColor4D specular;
-		aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &specular);
+		aiGetMaterialColor(mat, AI_MATKEY_COLOR_SPECULAR, &specular);
 		optix_mat["Ks"]->setFloat(specular.r, specular.b, specular.g, specular.a);
 
 		float shininess;

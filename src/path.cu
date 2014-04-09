@@ -37,8 +37,8 @@ rtDeclareVariable(float3, U, , );
 rtDeclareVariable(float3, V, , );
 rtDeclareVariable(float3, W, , );
 //lens (for depth of field)
-rtDeclareVariable(float, lens_radius, , )=0.f;
-rtDeclareVariable(float, focal_dist, , )=0.f;
+rtDeclareVariable(float, lens_radius, , )=0.5f;
+rtDeclareVariable(float, focal_dist, , )=150.f;
 
 //frame number to make sure result is different every frame
 rtDeclareVariable(int, frame, , );
@@ -50,6 +50,9 @@ rtBuffer<float4, 2> output;
 
 //top object to start tracing rays
 rtDeclareVariable(rtObject, top_object, , );
+
+
+rtDeclareVariable(float, scene_epsilon, , )=0.5f;
 
 RT_PROGRAM void camera(){
 	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
@@ -67,8 +70,14 @@ RT_PROGRAM void camera(){
 		int y = samples_per_pixel/sqrt_num_samples;
 		float2 jitter = make_float2(x-rnd(seed), y-rnd(seed));
 		float2 d = pixel + jitter*jitter_scale;
-		float3 ray_origin = eye;
-		float3 ray_direction = normalize(d.x * U + d.y * V + W);
+
+		float r = lens_radius * sqrtf(rnd(seed));
+		float ang = 2.f * M_PIf * rnd(seed);
+
+		float3 ray_origin = eye + r * ( U * cosf(ang) + V * sinf(ang));
+		float3 ray_target = eye + (d.x * U + d.y * V + W) * focal_dist;
+		float3 ray_direction = normalize(ray_target - ray_origin);
+
 
 		PathResult ray_result;
 		ray_result.atenuation=make_float4(1.f);
@@ -80,7 +89,7 @@ RT_PROGRAM void camera(){
 
 		for(;;){
 
-			Ray ray = optix::make_Ray(ray_origin, ray_direction, PathRay, 0.1, RT_DEFAULT_MAX);
+			Ray ray = make_Ray(ray_origin, ray_direction, PathRay, scene_epsilon, RT_DEFAULT_MAX);
 			rtTrace(top_object, ray, ray_result);
 
 			if(ray_result.finished)
@@ -121,27 +130,78 @@ RT_PROGRAM void path_miss(){
 
 #include "material.h"
 
-__device__ __inline__ void calc_direct_light(){
 
-}
 
 RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,
 	//when first diffuse material is hit we stop counting emmisive contributions
-	current_path_result.result=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
-	current_path_result.finished=true;
 
-	return;
 
 	current_path_result.count_emissive=false;
 	//calculate diffuse and specular probabilities.
-	float pdiff=(Kd.x+Kd.y+Kd.z)*0.33333333333333333333333333333f;
-	float pspec=(Ks.x+Ks.y+Ks.z)*0.33333333333333333333333333333f;
+	float4 diff_coef = Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
+	float4 spec_coef = Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
+
+	//rtPrintf("%f %f %f \n", spec_coef.x, spec_coef.y, spec_coef.z);
+
+	float3 position = current_ray.origin + current_ray.direction * t_hit;
+
+	for(int i=0; i<lights.size(); i++){
+		//TODO sample light
+		float3 center = make_float3(lights[i].pos);
+
+		float3 w = normalize(center-position);
+		float3 v = normalize(cross(w, shading_normal));
+		float3 u = cross(v, w);
+
+		float u1, u2;
+		u1=rnd(current_path_result.seed);
+		u2=rnd(current_path_result.seed);
+
+		float cos_a = 1 - u1 + u1 * sqrtf(1-powf(lights[i].pos.w / length(position-center), 2.f));
+		float sin_a = sqrtf(1-cos_a*cos_a);
+		float phi = 2 * M_PIf * u2;
+
+		float3 dir = u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a;
+
+		float intensity = dot(shading_normal, dir);
+
+		if(intensity>0.f){
+
+			float radius = lights[i].pos.w;
+
+			float3 o = position - center;
+
+			float b = dot(o, dir);
+			float c = dot(o, o) - radius * radius;
+			float disc = b * b - c;
+
+			float sdisc = sqrtf(disc);
+			float root1 = (-b -sdisc);
+
+			Ray shadow_test = make_Ray(position, dir, ShadowRay, scene_epsilon, root1);
+			ShadowResult s_res;
+			s_res.in_shadow=false;
+			rtTrace(top_object, shadow_test, s_res);
+
+			if(!s_res.in_shadow){
+				current_path_result.result += diff_coef * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation;
+			}
+		}
+	}
+
+
+
+	float3 pkd = make_float3(diff_coef*current_path_result.atenuation);
+	float3 pks = make_float3(spec_coef*current_path_result.atenuation);
+
+	float pdiff=(pkd.x+pkd.y+pkd.z)*0.33333333333333333333333333333f;
+	float pspec=(pks.x+pks.y+pks.z)*0.33333333333333333333333333333f;
 	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(Ns+2.f)/(Ns+1.f));
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
-	if(r<pdiff+pspec){
+	if(r<pdiff){
 		//select diffuse sample
 		if(r<pdiff){
 			float u1=rnd(current_path_result.seed);
@@ -151,11 +211,13 @@ RT_PROGRAM void glossy_shading(){
 			optix::Onb onb(shading_normal);
 			onb.inverse_transform(dir);
 
-			current_path_result.atenuation *= Kd/pdiff;
+			current_path_result.atenuation *= diff_coef/pdiff;
 			current_path_result.direction = dir;
+			current_path_result.position = position;
 
 		}
 		//select specular sample
+		/*
 		else {
 			float u1=rnd(current_path_result.seed);
 			float u2=rnd(current_path_result.seed);
@@ -169,13 +231,14 @@ RT_PROGRAM void glossy_shading(){
 			float intensity=optix::dot(dir, shading_normal);
 			//verify if sampled direction is above surface
 			if(intensity>0.f){
-				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (Ks/pspec) * optix::dot(dir, shading_normal);
+				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * optix::dot(dir, shading_normal);
 				current_path_result.direction=dir;
+				current_path_result.position = position;
 			}
 			else{
 				current_path_result.finished=true;
 			}
-		}
+		}*/
 	}
 	//consider that photon is absorbed and finish path
 	else{

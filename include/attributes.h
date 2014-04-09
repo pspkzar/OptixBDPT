@@ -4,7 +4,7 @@
 #include <optix_world.h>
 
 // Intersection attributes
-rtDeclareVariable(float3, pos, attribute pos, );
+//rtDeclareVariable(float3, pos, attribute pos, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float2, texCoord, attribute texCoord, );

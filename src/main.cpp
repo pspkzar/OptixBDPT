@@ -7,12 +7,20 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
+#define STEP 2.f
+#define ANG_STEP 0.1f
+
 using namespace optix;
 using namespace std;
 
-int w = 200, h=200;
+int w = 600, h=600;
 int frame=1;
 Context optix_context;
+
+float3 eye=make_float3(0.f, 0.f, 0.f);
+float3 up=make_float3(0.f,1.f,0.f);
+float3 W=make_float3(0.f, 0.f, -1.f);
+
 
 void reshape(int nw, int nh){
 	w=nw;
@@ -33,6 +41,46 @@ void renderScene(){
 	output->unmap();
 	optix_context["frame"]->setInt(++frame);
 	glutSwapBuffers();
+}
+
+void keyboard(unsigned char key, int x, int y){
+
+    float3 U=normalize(cross(up,-W));
+    float3 V=cross(-W, U);
+
+    switch(key){
+    case 'w':
+        eye+=STEP*W;
+        break;
+    case 's':
+        eye-=STEP*W;
+        break;
+
+    case 'i':
+        W=normalize(W+ANG_STEP*V);
+        break;
+    case 'k':
+        W=normalize(W-ANG_STEP*V);
+        break;
+
+    case 'l':
+        W=normalize(W+ANG_STEP*U);
+        break;
+    case 'j':
+        W=normalize(W-ANG_STEP*U);
+        break;
+    }
+
+    U=normalize(cross(up,-W));
+    V=cross(-W, U);
+
+    optix_context["eye"]->setFloat(eye);
+    optix_context["U"]->setFloat(U);
+    optix_context["V"]->setFloat(V);
+    optix_context["W"]->setFloat(W);
+
+    frame=1;
+    optix_context["frame"]->setInt(frame);
 }
 
 int main(int argc, char **argv){
@@ -64,8 +112,8 @@ int main(int argc, char **argv){
 	oc->setMissProgram(PathRay, path_miss);
 
 	SphereLight lights[1];
-	lights[0].color=make_float4(1.f);
-	lights[0].pos=make_float4(0.f, 10.f, 0.f, 0.5f);
+	lights[0].color=make_float4(3.f);
+	lights[0].pos=make_float4(0.f, 350.f, 0.f, 50.f);
 
 	SphereLightLoader l_loader(lights, 1, oc);
 	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));
@@ -83,16 +131,16 @@ int main(int argc, char **argv){
 
 	oc["frame"]->setInt(frame);
 
-	Buffer output = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, w, h);
+	Buffer output = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT4, w, h);
 	oc["output"]->set(output);
 
 	//TODO set camera variables
-	oc["eye"]->setFloat(0.f, 5.f, 0.f);
-	oc["U"]->setFloat(1.f, 0.f, 0.f);
-	oc["V"]->setFloat(0.f, 1.f, 0.f);
-	oc["W"]->setFloat(0.f, 0.f, -1.f);
+	oc["eye"]->setFloat(eye);
+	oc["U"]->setFloat(normalize(cross(-W, up)));
+	oc["V"]->setFloat(up);
+	oc["W"]->setFloat(W);
 
-	oc->setStackSize(10000);
+	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
 
 	Group g = oc->createGroup();
@@ -119,7 +167,7 @@ int main(int argc, char **argv){
 	glutReshapeFunc(reshape);
 	glutDisplayFunc(renderScene);
 	//TODO keyboard and mouse funcions to allow interactivity
-	//glutKeyboardFunc(keyboard);
+	glutKeyboardFunc(keyboard);
 	glutIdleFunc(renderScene);
 
 	glutMainLoop();
