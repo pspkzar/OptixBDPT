@@ -20,6 +20,8 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
+#define MIN_DEPTH 3
+
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
 
@@ -37,7 +39,7 @@ rtDeclareVariable(float3, U, , );
 rtDeclareVariable(float3, V, , );
 rtDeclareVariable(float3, W, , );
 //lens (for depth of field)
-rtDeclareVariable(float, lens_radius, , )=0.5f;
+rtDeclareVariable(float, lens_radius, , )=0.f;
 rtDeclareVariable(float, focal_dist, , )=150.f;
 
 //frame number to make sure result is different every frame
@@ -97,6 +99,7 @@ RT_PROGRAM void camera(){
 
 			ray_origin=ray_result.position;
 			ray_direction=ray_result.direction;
+			ray_result.depth++;
 
 		}
 
@@ -185,7 +188,11 @@ RT_PROGRAM void glossy_shading(){
 			rtTrace(top_object, shadow_test, s_res);
 
 			if(!s_res.in_shadow){
-				current_path_result.result += diff_coef * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation;
+				float4 diff_res = diff_coef ;
+				float spec_intensity = fmaxf(dot(dir, reflect(current_ray.direction, shading_normal)), 0.f);
+				spec_intensity = powf(spec_intensity, Ns);
+				float4 spec_res = spec_coef * (Ns +2.f)* 0.5f * spec_intensity;
+				current_path_result.result += (diff_res + spec_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f)));
 			}
 		}
 	}
@@ -201,7 +208,13 @@ RT_PROGRAM void glossy_shading(){
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
-	if(r<pdiff){
+	if(current_path_result.depth < MIN_DEPTH){
+		float inv_p = 1.f/(pdiff+pspec);
+		pdiff*=inv_p;
+		pspec*=inv_p;
+	}
+
+	if(r<pdiff+pspec){
 		//select diffuse sample
 		if(r<pdiff){
 			float u1=rnd(current_path_result.seed);
@@ -217,7 +230,7 @@ RT_PROGRAM void glossy_shading(){
 
 		}
 		//select specular sample
-		/*
+
 		else {
 			float u1=rnd(current_path_result.seed);
 			float u2=rnd(current_path_result.seed);
@@ -231,14 +244,14 @@ RT_PROGRAM void glossy_shading(){
 			float intensity=optix::dot(dir, shading_normal);
 			//verify if sampled direction is above surface
 			if(intensity>0.f){
-				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * optix::dot(dir, shading_normal);
+				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
 				current_path_result.direction=dir;
 				current_path_result.position = position;
 			}
 			else{
 				current_path_result.finished=true;
 			}
-		}*/
+		}
 	}
 	//consider that photon is absorbed and finish path
 	else{

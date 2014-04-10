@@ -13,7 +13,7 @@
 using namespace optix;
 using namespace std;
 
-int w = 600, h=600;
+int w = 800, h=800;
 int frame=1;
 Context optix_context;
 
@@ -112,8 +112,8 @@ int main(int argc, char **argv){
 	oc->setMissProgram(PathRay, path_miss);
 
 	SphereLight lights[1];
-	lights[0].color=make_float4(3.f);
-	lights[0].pos=make_float4(0.f, 350.f, 0.f, 50.f);
+	lights[0].color=make_float4(400.f);
+	lights[0].pos=make_float4(0.f, 5350.f, 0.f, 1050.f);
 
 	SphereLightLoader l_loader(lights, 1, oc);
 	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));

@@ -347,6 +347,7 @@ void OptixContext::loadMeshes() {
 		instance->setGeometry(optix_mesh);
 		instance->setMaterialCount(1);
 		instance->setMaterial(0, _materials[mname]);
+		instance["bump"]->set(_materials[mname]["map_bump"]->getTextureSampler());
 
 		_meshes->setChild(i, instance);
 	}
