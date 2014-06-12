@@ -45,7 +45,7 @@ rtDeclareVariable(float, focal_dist, , )=150.f;
 //frame number to make sure result is different every frame
 rtDeclareVariable(int, frame, , );
 //samples for stratified sampling
-rtDeclareVariable(int, sqrt_num_samples, , )=1;
+rtDeclareVariable(int, sqrt_num_samples, , )=2;
 
 //output buffer
 rtBuffer<float4, 2> output;
@@ -216,7 +216,7 @@ RT_PROGRAM void glossy_shading(){
 				}
 				spec_intensity = powf(spec_intensity, Ns);
 				float4 spec_res = spec_coef * (Ns +2.f)* 0.5f * spec_intensity;
-				current_path_result.result += (diff_res + spec_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f))) * 2.f * M_PIf;
+				current_path_result.result += (diff_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f))) * 2.f * M_PIf;
 			}
 		}
 	}
@@ -260,6 +260,7 @@ RT_PROGRAM void glossy_shading(){
 			//select specular sample
 
 			else {
+				current_path_result.count_emissive=true;
 				float u1=rnd(current_path_result.seed);
 				float u2=rnd(current_path_result.seed);
 				float3 dir;
@@ -308,7 +309,7 @@ RT_PROGRAM void glossy_shading(){
 			//select specular sample
 
 			else {
-
+				current_path_result.count_emissive=true;
 				float u1=rnd(current_path_result.seed);
 				float u2=rnd(current_path_result.seed);
 				float3 dir;
