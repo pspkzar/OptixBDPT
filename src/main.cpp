@@ -6,8 +6,10 @@
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
+#include <IL/il.h>
+#include <IL/ilu.h>
 
-#define STEP 2.f
+#define STEP 0.2f
 #define ANG_STEP 0.1f
 
 using namespace optix;
@@ -20,6 +22,7 @@ Context optix_context;
 float3 eye=make_float3(0.f, 0.f, 0.f);
 float3 up=make_float3(0.f,1.f,0.f);
 float3 W=make_float3(0.f, 0.f, -1.f);
+
 
 
 void reshape(int nw, int nh){
@@ -69,6 +72,25 @@ void keyboard(unsigned char key, int x, int y){
     case 'j':
         W=normalize(W-ANG_STEP*U);
         break;
+    case 'x':
+    	void * pixels = optix_context["output"]->getBuffer()->map();
+    	ILuint image = ilGenImage();
+    	ilBindImage(image);
+    	ilTexImage(w, h, 1, 4, IL_RGBA, IL_FLOAT, pixels);
+
+    	//iluFlipImage();
+
+    	ilEnable(IL_FILE_OVERWRITE);
+
+    	ilSave(IL_HDR, "res.hdr");
+
+    	ilDeleteImage(image);
+    	ilBindImage(0);
+    	optix_context["output"]->getBuffer()->unmap();
+
+    	cout << ilGetError() << endl;
+    	return;
+
     }
 
     U=normalize(cross(up,-W));
@@ -95,7 +117,9 @@ int main(int argc, char **argv){
 		app_loc=command.substr(0, slash_i+1);
 	}
 
-	OptixContext c("crytek-sponza/sponza.obj");
+	string s(argv[1]);
+
+	OptixContext c(s);
 	c.setBoundingBoxProgram(app_loc+"mesh.ptx", "boundingBoxMesh");
 	c.setIntersectionProgram(app_loc+"mesh.ptx", "intersectMesh");
 
@@ -112,8 +136,8 @@ int main(int argc, char **argv){
 	oc->setMissProgram(PathRay, path_miss);
 
 	SphereLight lights[1];
-	lights[0].color=make_float4(400.f);
-	lights[0].pos=make_float4(0.f, 5350.f, 0.f, 1050.f);
+	lights[0].color=make_float4(80.f);
+	lights[0].pos=make_float4(0.f, 1.f, 0.f, 0.1f);
 
 	SphereLightLoader l_loader(lights, 1, oc);
 	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));
@@ -134,7 +158,7 @@ int main(int argc, char **argv){
 	Buffer output = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT4, w, h);
 	oc["output"]->set(output);
 
-	//TODO set camera variables
+	//set camera variables
 	oc["eye"]->setFloat(eye);
 	oc["U"]->setFloat(normalize(cross(-W, up)));
 	oc["V"]->setFloat(up);

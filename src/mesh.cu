@@ -1,7 +1,10 @@
 #include <optix_world.h>
+#include <math_constants.h>
 #include "mesh.h"
 
-#define BUMP_INTENSITY 0.5f
+#define BUMP_INTENSITY 0.1f
+
+#define TESS 4
 
 using namespace optix;
 
@@ -54,6 +57,8 @@ RT_PROGRAM void intersectMesh(int primIdx){
 			float3 b2=bitangent_buffer[id.y];
 			float3 b3=bitangent_buffer[id.z];
 
+
+
 			tmp_tangent=(1.0f-beta-gamma)*t1 + beta*t2 +gamma*t3;
 			tmp_bitangent=(1.0f-beta-gamma)*b1 + beta*b2 +gamma*b3;
 
@@ -65,13 +70,84 @@ RT_PROGRAM void intersectMesh(int primIdx){
 		}
 
 		if((tangent_buffer.size()==vertex_buffer.size()) && (texCoord_buffer.size()==vertex_buffer.size())){
+
+			//bump mapping
 			float height = tex2D(bump, texCoord.x, texCoord.y);
-			float ray_n = dot(current_ray.direction, tmp_normal);
 
-			float dx = tex2D(bump, tmp_texCoord.x+0.0001, tmp_texCoord.y) - tex2D(bump, tmp_texCoord.x-0.0001, tmp_texCoord.y);
-			float dy = tex2D(bump, tmp_texCoord.x, tmp_texCoord.y+0.0001) - tex2D(bump, tmp_texCoord.x, tmp_texCoord.y-0.0001);
+			float dx = (tex2D(bump, tmp_texCoord.x+0.0005f, tmp_texCoord.y) - tex2D(bump, tmp_texCoord.x-0.0005f, tmp_texCoord.y))*1000.f;
+			float dy = (tex2D(bump, tmp_texCoord.x, tmp_texCoord.y+0.0005f) - tex2D(bump, tmp_texCoord.x, tmp_texCoord.y-0.0005f))*1000.f;
+			if(dx>0.f || dy >0.f){
+				float3 o = normalize(-dx*tmp_tangent + dy*tmp_bitangent - sqrtf(dx*dx + dy*dy) * tmp_normal);
+				float3 s = normalize(cross(tmp_normal, o));
+				tmp_normal= cross(o,s);
 
-			tmp_normal=normalize(tmp_normal+ 10000.f * (-dx*tmp_tangent + dy * tmp_bitangent));
+			}
+
+			//parallax mapping
+			/*Matrix3x3 a;
+			a.setCol(0, tmp_tangent);
+			a.setCol(1, tmp_bitangent);
+			a.setCol(2, tmp_normal);
+
+			float3 eye_vec = (-current_ray.direction) * a;
+
+			float parallax_limit = -length(make_float2(eye_vec))/eye_vec.z;
+			parallax_limit*=BUMP_INTENSITY;
+
+			float2 offSetDir=normalize(make_float2(eye_vec));
+			float2 maxOffset = offSetDir * parallax_limit;
+
+			int nSamples = (int) optix::lerp(1000.f, 500.f, dot(-current_ray.direction, tmp_normal));
+			float step = 1.f/(float) nSamples;
+
+			float ray_h = 1.f;
+			float2 current_offset=make_float2(0.f);
+			float2 last_offset=make_float2(0.f);
+
+			float last_h=1.f;
+			float current_h=1.f;
+
+			int current_sample=0;
+
+			while(current_sample<nSamples){
+				current_h = tex2D(bump, tmp_texCoord.x + current_offset.x, tmp_texCoord.y - current_offset.y);
+				if(current_h > ray_h){
+					float delta1 = current_h - ray_h;
+					float delta2 = (ray_h + step) - last_h;
+
+					float ratio = delta1 / (delta1 + delta2);
+
+					current_offset = ratio * last_offset + (1.f-ratio) * current_offset;
+
+					current_sample = nSamples+1;
+				}
+				else{
+					current_sample++;
+
+					ray_h -= step;
+
+					last_offset = current_offset;
+					current_offset += step * maxOffset;
+
+					last_h = current_h;
+				}
+			}
+
+			tmp_texCoord.x += current_offset.x;
+			tmp_texCoord.y -= current_offset.y;
+
+			//t += current_h * dot(tmp_normal, -current_ray.direction);
+
+			if(t< 0.1) return;
+
+			float dx = (tex2D(bump, tmp_texCoord.x+0.0005f, tmp_texCoord.y) - tex2D(bump, tmp_texCoord.x-0.0005f, tmp_texCoord.y))*1000.f;
+			float dy = (tex2D(bump, tmp_texCoord.x, tmp_texCoord.y+0.0005f) - tex2D(bump, tmp_texCoord.x, tmp_texCoord.y-0.0005f))*1000.f;
+			if(dx>0.f || dy >0.f){
+				float3 o = normalize(-dx*tmp_tangent + dy*tmp_bitangent - sqrtf(dx*dx + dy*dy) * tmp_normal);
+				float3 s = normalize(cross(tmp_normal, o));
+				tmp_normal= cross(o,s);
+
+			}*/
 		}
 
 		if(rtPotentialIntersection(t))

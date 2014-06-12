@@ -39,7 +39,7 @@ rtDeclareVariable(float3, U, , );
 rtDeclareVariable(float3, V, , );
 rtDeclareVariable(float3, W, , );
 //lens (for depth of field)
-rtDeclareVariable(float, lens_radius, , )=0.f;
+rtDeclareVariable(float, lens_radius, , )=0.0f;
 rtDeclareVariable(float, focal_dist, , )=150.f;
 
 //frame number to make sure result is different every frame
@@ -54,7 +54,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.5f;
+rtDeclareVariable(float, scene_epsilon, , )=0.01f;
 
 RT_PROGRAM void camera(){
 	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
@@ -110,14 +110,16 @@ RT_PROGRAM void camera(){
 
 	result/=sqrt_num_samples * sqrt_num_samples;
 
+
 	if(frame>1){
 		float a = 1.f/float(frame);
 		float b = float(frame-1)*a;
-		float4 old_color=output[launch_index];
-		output[launch_index]=a*result+b*old_color;
+		float4 old_color=output[launch_index];///(make_float4(1.f) - output[launch_index]);
+		float4 new_color = a*result+b*old_color;
+		output[launch_index]= new_color;///(new_color + make_float4(1.f));
 	}
 	else{
-		output[launch_index]=result;
+		output[launch_index]=result;///(result + make_float4(1.f));
 	}
 
 }
@@ -145,16 +147,31 @@ RT_PROGRAM void glossy_shading(){
 	float4 diff_coef = Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
 	float4 spec_coef = Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
 
-	//rtPrintf("%f %f %f \n", spec_coef.x, spec_coef.y, spec_coef.z);
-
 	float3 position = current_ray.origin + current_ray.direction * t_hit;
 
+	float3 ffnormal = optix::faceforward(shading_normal, -current_ray.direction, shading_normal);
+
+	//check refraction
+	float3 refracted = make_float3(0.f);
+	float reflectance;
+	if(Ni>0 && optix::refract(refracted, current_ray.direction, shading_normal, Ni)){
+		float cos_theta = dot(current_ray.direction, shading_normal);
+		if(cos_theta<0.f)
+			cos_theta = -cos_theta;
+		else
+			cos_theta = dot(refracted, shading_normal);
+		float r0 = powf((1.f-Ni)/(1.f+Ni), 2.f);
+		reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
+
+	}
+	else reflectance = 1.f;
+
 	for(int i=0; i<lights.size(); i++){
-		//TODO sample light
+		//sample light
 		float3 center = make_float3(lights[i].pos);
 
 		float3 w = normalize(center-position);
-		float3 v = normalize(cross(w, shading_normal));
+		float3 v = normalize(cross(w, ffnormal));
 		float3 u = cross(v, w);
 
 		float u1, u2;
@@ -167,7 +184,7 @@ RT_PROGRAM void glossy_shading(){
 
 		float3 dir = u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a;
 
-		float intensity = dot(shading_normal, dir);
+		float intensity = dot(ffnormal, dir);
 
 		if(intensity>0.f){
 
@@ -189,10 +206,17 @@ RT_PROGRAM void glossy_shading(){
 
 			if(!s_res.in_shadow){
 				float4 diff_res = diff_coef ;
-				float spec_intensity = fmaxf(dot(dir, reflect(current_ray.direction, shading_normal)), 0.f);
+				float spec_intensity;
+				if(dot(-current_ray.direction, shading_normal)>0.f)
+					spec_intensity = fmaxf(dot(dir, reflect(current_ray.direction, ffnormal)), 0.f);
+				else{
+					if(optix::length(refracted)>0.f){
+						spec_intensity = fmaxf(dot(dir, refracted), 0.f);
+					}
+				}
 				spec_intensity = powf(spec_intensity, Ns);
 				float4 spec_res = spec_coef * (Ns +2.f)* 0.5f * spec_intensity;
-				current_path_result.result += (diff_res + spec_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f)));
+				current_path_result.result += (diff_res + spec_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f))) * 2.f * M_PIf;
 			}
 		}
 	}
@@ -204,60 +228,116 @@ RT_PROGRAM void glossy_shading(){
 
 	float pdiff=(pkd.x+pkd.y+pkd.z)*0.33333333333333333333333333333f;
 	float pspec=(pks.x+pks.y+pks.z)*0.33333333333333333333333333333f;
-	pspec*=fminf(1.f, optix::dot(current_ray.direction, shading_normal)*(Ns+2.f)/(Ns+1.f));
+	pspec*=fminf(1.f, optix::dot(current_ray.direction, ffnormal)*(Ns+2.f)/(Ns+1.f));
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
-	if(current_path_result.depth < MIN_DEPTH){
+	if(current_path_result.depth < MIN_DEPTH || pdiff+pspec>1.f){
 		float inv_p = 1.f/(pdiff+pspec);
 		pdiff*=inv_p;
 		pspec*=inv_p;
 	}
 
-	if(r<pdiff+pspec){
-		//select diffuse sample
-		if(r<pdiff){
-			float u1=rnd(current_path_result.seed);
-			float u2=rnd(current_path_result.seed);
-			float3 dir;
-			optix::cosine_sample_hemisphere(u1, u2, dir);
-			optix::Onb onb(shading_normal);
-			onb.inverse_transform(dir);
+	float preflect = rnd(current_path_result.seed);
+	if(preflect < reflectance){
 
-			current_path_result.atenuation *= diff_coef/pdiff;
-			current_path_result.direction = dir;
-			current_path_result.position = position;
+		if(r<pdiff+pspec){
+			//select diffuse sample
+			if(r<pdiff){
 
-		}
-		//select specular sample
+				float u1=rnd(current_path_result.seed);
+				float u2=rnd(current_path_result.seed);
+				float3 dir;
+				optix::cosine_sample_hemisphere(u1, u2, dir);
+				optix::Onb onb(ffnormal);
+				onb.inverse_transform(dir);
 
-		else {
-			float u1=rnd(current_path_result.seed);
-			float u2=rnd(current_path_result.seed);
-			float3 dir;
-			dir.x = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*cosf(M_2_PIf*u2);
-			dir.y = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*sinf(M_2_PIf*u2);
-			dir.z = powf(u1, 1.f/(Ns+1.f));
-			optix::Onb onb(optix::reflect(current_ray.direction, shading_normal));
-			onb.inverse_transform(dir);
-
-			float intensity=optix::dot(dir, shading_normal);
-			//verify if sampled direction is above surface
-			if(intensity>0.f){
-				current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
-				current_path_result.direction=dir;
+				current_path_result.atenuation *= diff_coef/pdiff;
+				current_path_result.direction = dir;
 				current_path_result.position = position;
+
 			}
-			else{
-				current_path_result.finished=true;
+			//select specular sample
+
+			else {
+				float u1=rnd(current_path_result.seed);
+				float u2=rnd(current_path_result.seed);
+				float3 dir;
+				dir.x = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*cosf(M_2_PIf*u2);
+				dir.y = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*sinf(M_2_PIf*u2);
+				dir.z = powf(u1, 1.f/(Ns+1.f));
+				optix::Onb onb(optix::reflect(current_ray.direction, ffnormal));
+				onb.inverse_transform(dir);
+
+				float intensity=optix::dot(dir, ffnormal);
+				//verify if sampled direction is above surface
+				if(intensity>0.f){
+					current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
+					current_path_result.direction=dir;
+					current_path_result.position = position;
+				}
+				else{
+					current_path_result.finished=true;
+				}
 			}
 		}
-	}
-	//consider that photon is absorbed and finish path
-	else{
-		current_path_result.finished=true;
+		//consider that photon is absorbed and finish path
+		else{
+			current_path_result.finished=true;
+		}
 	}
 
+	else{
+
+		if(r<pdiff+pspec){
+			//select diffuse sample
+			if(false){//r<pdiff){
+
+				float u1=rnd(current_path_result.seed);
+				float u2=rnd(current_path_result.seed);
+				float3 dir;
+				optix::cosine_sample_hemisphere(u1, u2, dir);
+				optix::Onb onb(-ffnormal);
+				onb.inverse_transform(dir);
+
+				current_path_result.atenuation *= diff_coef/pdiff;
+				current_path_result.direction = dir;
+				current_path_result.position = position;
+
+			}
+			//select specular sample
+
+			else {
+
+				float u1=rnd(current_path_result.seed);
+				float u2=rnd(current_path_result.seed);
+				float3 dir;
+				dir.x = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*cosf(M_2_PIf*u2);
+				dir.y = sqrtf(1-powf(u1, 2.f/(Ns+1.f)))*sinf(M_2_PIf*u2);
+				dir.z = powf(u1, 1.f/(Ns+1.f));
+				optix::Onb onb(refracted);
+				onb.inverse_transform(dir);
+
+				float intensity;
+				intensity=optix::dot(dir, -ffnormal);
+
+
+				//verify if sampled direction is above surface
+				if(intensity>0.f){
+					current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
+					current_path_result.direction=dir;
+					current_path_result.position = position;
+				}
+				else{
+					current_path_result.finished=true;
+				}
+			}
+		}
+		//consider that photon is absorbed and finish path
+		else{
+			current_path_result.finished=true;
+		}
+	}
 }
 
 RT_PROGRAM void path_ignore_alpha(){
