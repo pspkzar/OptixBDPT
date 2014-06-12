@@ -184,7 +184,7 @@ RT_PROGRAM void glossy_shading(){
 
 		float3 dir = u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a;
 
-		float intensity = dot(ffnormal, dir);
+		float intensity = dot(shading_normal, dir);
 
 		if(intensity>0.f){
 
@@ -207,7 +207,7 @@ RT_PROGRAM void glossy_shading(){
 			if(!s_res.in_shadow){
 				float4 diff_res = diff_coef ;
 				float spec_intensity;
-				if(dot(-current_ray.direction, shading_normal)>0.f)
+				if(dot(dir, ffnormal)>0.f)
 					spec_intensity = fmaxf(dot(dir, reflect(current_ray.direction, ffnormal)), 0.f);
 				else{
 					if(optix::length(refracted)>0.f){
