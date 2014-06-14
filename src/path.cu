@@ -119,6 +119,15 @@ RT_PROGRAM void camera(){
 		}
 		else reflectance = 1.f;
 
+		float p_reflect = rnd(seed);
+
+		if(p_reflect<reflectance){
+
+		}
+		else{
+
+		}
+
 		i++;
 	}
 
