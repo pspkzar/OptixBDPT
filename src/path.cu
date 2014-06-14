@@ -1,7 +1,9 @@
 #include <optix_world.h>
-#include "commonStructs.h"
+
 #include "random.h"
 #include "sphere_light.h"
+
+#include "commonStructs.h"
 
 using namespace optix;
 
@@ -28,6 +30,7 @@ rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
 //ray payloads
 rtDeclareVariable(PathResult, current_path_result, rtPayload, );
 rtDeclareVariable(ShadowResult, current_shadow_result, rtPayload, );
+rtDeclareVariable(LightPathResult, current_light_result, rtPayload, );
 
 //kernel dimensions
 rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
@@ -45,7 +48,10 @@ rtDeclareVariable(float, focal_dist, , )=150.f;
 //frame number to make sure result is different every frame
 rtDeclareVariable(int, frame, , );
 //samples for stratified sampling
-rtDeclareVariable(int, sqrt_num_samples, , )=2;
+rtDeclareVariable(int, sqrt_num_samples, , )=1;
+
+//light path buffer
+rtBuffer<LightPathResult> lightPathBuffer;
 
 //output buffer
 rtBuffer<float4, 2> output;
@@ -54,10 +60,69 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.01f;
+rtDeclareVariable(float, scene_epsilon, , )=1.f;
 
 RT_PROGRAM void camera(){
 	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
+
+	//TODO calculate light path
+	SphereLight l = lights[0];
+	float l1 = rnd(seed)*2.f-1.f;
+	float l2 = rnd(seed)*2.f-1.f;
+	while(l1*l1+l2*l2>=1.f){
+		l1 = rnd(seed)*2.f-1.f;
+		l2 = rnd(seed)*2.f-1.f;
+	}
+
+	float3 light_normal;
+	light_normal.x = 2.f * l1 * sqrtf(1.f - l1*l1 - l2*l2);
+	light_normal.y = 2.f * l2 * sqrtf(1.f - l1*l1 - l2*l2);
+	light_normal.z = 1.f - 2.f * (l1*l1 + l2*l2);
+
+	float3 light_point = make_float3(l.pos) + l.pos.z * light_normal;
+
+	l1 = rnd(seed);
+	l2 = rnd(seed);
+
+	float3 light_dir;
+	optix::cosine_sample_hemisphere(l1, l2, light_dir);
+	optix::Onb onb_light(light_normal);
+	onb_light.inverse_transform(light_dir);
+
+	Ray light_ray = optix::make_Ray(light_point, light_dir, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+	lightPathBuffer[0].radiance=l.color;
+	lightPathBuffer[0].In=light_dir;
+	rtTrace(top_object, light_ray, lightPathBuffer[0]);
+
+	int i=1;
+	while(i<lightPathBuffer.size() && (i==0 || !lightPathBuffer[i-1].missed)){
+
+		float4 diff_coef = lightPathBuffer[i-1].Kd;
+		float4 spec_coef = lightPathBuffer[i-1].Ks;
+
+		float3 position = lightPathBuffer[i-1].position;
+
+		float3 ffnormal = optix::faceforward(lightPathBuffer[i-1].normal, lightPathBuffer[i-1].In, lightPathBuffer[i-1].normal);
+
+		//check refraction
+		float3 refracted = make_float3(0.f);
+		float reflectance;
+		if(lightPathBuffer[i-1].Ni>0 && optix::refract(refracted, lightPathBuffer[i-1].In, lightPathBuffer[i-1].normal, lightPathBuffer[i-1].Ni)){
+			float cos_theta = dot(lightPathBuffer[i-1].In, lightPathBuffer[i-1].normal);
+			if(cos_theta<0.f)
+				cos_theta = -cos_theta;
+			else
+				cos_theta = dot(refracted, lightPathBuffer[i-1].normal);
+			float r0 = powf((1.f-lightPathBuffer[i-1].Ni)/(1.f+lightPathBuffer[i-1].Ni), 2.f);
+			reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
+
+		}
+		else reflectance = 1.f;
+
+		i++;
+	}
+
+
 
 	float2 inv_screen=1.f/(make_float2(launch_dim)) *2.f;
 	float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
@@ -124,6 +189,8 @@ RT_PROGRAM void camera(){
 
 }
 
+
+
 RT_PROGRAM void exception(){
 	//output[launch_index]=make_float4(1.f);
 	rtPrintExceptionDetails();
@@ -135,7 +202,19 @@ RT_PROGRAM void path_miss(){
 
 #include "material.h"
 
+RT_PROGRAM void lightPathTrace(){
+	current_light_result.Kd=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
+	current_light_result.Ks=Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
+	current_light_result.Ni=Ni;
+	current_light_result.Ns=Ns;
+	current_light_result.normal=shading_normal;
+	current_light_result.position=current_ray.origin + current_ray.direction * t_hit;
+	current_light_result.missed=false;
+}
 
+RT_PROGRAM void lightPathMiss(){
+	current_light_result.missed=true;
+}
 
 RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,

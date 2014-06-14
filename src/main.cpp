@@ -9,8 +9,10 @@
 #include <IL/il.h>
 #include <IL/ilu.h>
 
-#define STEP 0.2f
+#define STEP 2.f
 #define ANG_STEP 0.1f
+
+#define LIGHT_PATH_LENGTH 3
 
 using namespace optix;
 using namespace std;
@@ -128,6 +130,9 @@ int main(int argc, char **argv){
 	c.setClosestHitProgram(PathRay, app_loc+"path.ptx", "glossy_shading");
 	c.setAnyHitProgram(PathRay, app_loc+"path.ptx", "path_ignore_alpha");
 
+	c.setClosestHitProgram(LightPathRay, app_loc+"path.ptx", "lightPathTrace");
+	c.setClosestHitProgram(LightPathRay, app_loc+"path.ptx", "lightPathTrace");
+
 	c.setAnyHitProgram(ShadowRay, app_loc+"path.ptx", "shadow_probe");
 
 	Context oc = c.getContext();
@@ -135,9 +140,12 @@ int main(int argc, char **argv){
 	Program path_miss = oc->createProgramFromPTXFile(app_loc+"path.ptx", "path_miss");
 	oc->setMissProgram(PathRay, path_miss);
 
+	Program light_path_miss = oc->createProgramFromPTXFile(app_loc+"path.ptx", "lightPathMiss");
+	oc->setMissProgram(LightPathRay, light_path_miss);
+
 	SphereLight lights[1];
 	lights[0].color=make_float4(80.f);
-	lights[0].pos=make_float4(0.f, 1.f, 0.f, 0.1f);
+	lights[0].pos=make_float4(0.f, 5000.f, 0.f, 1000.f);
 
 	SphereLightLoader l_loader(lights, 1, oc);
 	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));
@@ -163,6 +171,12 @@ int main(int argc, char **argv){
 	oc["U"]->setFloat(normalize(cross(-W, up)));
 	oc["V"]->setFloat(up);
 	oc["W"]->setFloat(W);
+
+	Buffer lightPathBuffer = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER);
+	lightPathBuffer->setElementSize(sizeof(struct LightPathResult));
+	lightPathBuffer->setSize(LIGHT_PATH_LENGTH);
+	oc["lightPathBuffer"]->set(lightPathBuffer);
+
 
 	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
