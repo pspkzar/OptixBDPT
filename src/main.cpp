@@ -12,7 +12,7 @@
 #define STEP 2.f
 #define ANG_STEP 0.1f
 
-#define LIGHT_PATH_LENGTH 3
+#define LIGHT_PATH_LENGTH 1
 
 using namespace optix;
 using namespace std;
@@ -155,11 +155,14 @@ int main(int argc, char **argv){
 
 	l_loader.light_mat->setAnyHitProgram(ShadowRay, oc->createProgramFromPTXFile(app_loc+"path.ptx", "shadow_probe_light" ));
 
+	l_loader.light_mat->setClosestHitProgram(LightPathRay, oc->createProgramFromPTXFile(app_loc+"path.ptx", "lightPathHitLight"));
+
 	Program camera = oc->createProgramFromPTXFile(app_loc+"path.ptx", "camera");
 	Program exception = oc->createProgramFromPTXFile(app_loc+"path.ptx", "exception");
 	oc->setEntryPointCount(1);
 	oc->setRayGenerationProgram(0, camera);
 	oc->setExceptionProgram(0, exception);
+	oc->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 
 	oc["frame"]->setInt(frame);
 
@@ -178,7 +181,7 @@ int main(int argc, char **argv){
 	oc["lightPathBuffer"]->set(lightPathBuffer);
 
 
-	oc->setStackSize(4000);
+	oc->setStackSize(16000);
 	oc->setPrintEnabled(true);
 
 	Group g = oc->createGroup();
