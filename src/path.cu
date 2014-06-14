@@ -22,7 +22,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 3
+#define MIN_DEPTH 1
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -65,6 +65,8 @@ rtDeclareVariable(float, scene_epsilon, , )=1.f;
 RT_PROGRAM void camera(){
 	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
 
+
+
 	//TODO calculate light path
 	SphereLight l = lights[0];
 	float l1 = rnd(seed)*2.f-1.f;
@@ -95,7 +97,8 @@ RT_PROGRAM void camera(){
 	rtTrace(top_object, light_ray, lightPathBuffer[0]);
 
 	int i=1;
-	while(i<lightPathBuffer.size() && (i==0 || !lightPathBuffer[i-1].missed)){
+	while(i<lightPathBuffer.size() && !lightPathBuffer[i-1].missed){
+
 
 		float4 diff_coef = lightPathBuffer[i-1].Kd;
 		float4 spec_coef = lightPathBuffer[i-1].Ks;
@@ -119,17 +122,51 @@ RT_PROGRAM void camera(){
 		}
 		else reflectance = 1.f;
 
+		float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
+		float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
+		pspec*=fminf(1.f, optix::dot(lightPathBuffer[i-1].In, ffnormal)*(lightPathBuffer[i-1].Ns+2.f)/(lightPathBuffer[i-1].Ns+1.f));
+
+		//randomly select the type of contribution
+		float r=rnd(seed);
 		float p_reflect = rnd(seed);
 
 		if(p_reflect<reflectance){
+			if(r<pdiff+pspec){
+				if(r<pdiff){
+					lightPathBuffer[i].radiance = lightPathBuffer[i-1].radiance * diff_coef/pdiff * dot(lightPathBuffer[i-1].In, ffnormal);
+					float3 new_dir;
+					optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
+					optix::Onb onb(ffnormal);
+					onb.inverse_transform(new_dir);
+					lightPathBuffer[i].In=new_dir;
+					Ray new_ray = optix::make_Ray(lightPathBuffer[i-1].position, lightPathBuffer[i].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+					rtTrace(top_object, new_ray, lightPathBuffer[i]);
+				}
+				else{
 
+				}
+			}
+			else{
+
+			}
 		}
 		else{
+			if(r<pdiff+pspec){
+				if(r<pdiff){
 
+				}
+				else{
+
+				}
+			}
+			else{
+
+			}
 		}
 
 		i++;
 	}
+
 
 
 
@@ -211,6 +248,7 @@ RT_PROGRAM void path_miss(){
 
 #include "material.h"
 
+
 RT_PROGRAM void lightPathTrace(){
 	current_light_result.Kd=Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
 	current_light_result.Ks=Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
@@ -224,6 +262,7 @@ RT_PROGRAM void lightPathTrace(){
 RT_PROGRAM void lightPathMiss(){
 	current_light_result.missed=true;
 }
+
 
 RT_PROGRAM void glossy_shading(){
 	//because we calculate direct lighting in every point of the path,

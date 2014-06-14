@@ -62,17 +62,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1675350992" name="mesh.cu" rcbsApplicability="disable" resourcePath="src/mesh.cu" toolsToInvoke="nvcc.compiler.base.971005232.1250776189">
-						<tool id="nvcc.compiler.base.971005232.1250776189" name="NVCC Compiler" superClass="nvcc.compiler.base.971005232">
-							<option id="nvcc.compiler.modules.130565053" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
-								<listOptionValue builtIn="false" value="3"/>
-							</option>
-							<option id="nvcc.compiler.isintarget.1150675791" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
-							<inputType id="nvcc.compiler.input.cu.1994853696" superClass="nvcc.compiler.input.cu"/>
-							<inputType id="nvcc.compiler.input.cpp.1933523974" superClass="nvcc.compiler.input.cpp"/>
-							<inputType id="nvcc.compiler.input.c.374512608" superClass="nvcc.compiler.input.c"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1598352287" name="path.cu" rcbsApplicability="disable" resourcePath="src/path.cu" toolsToInvoke="nvcc.compiler.base.971005232.147218463">
 						<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.971005232.147218463" name="NVCC Compiler" superClass="nvcc.compiler.base.971005232">
 							<option id="nvcc.compiler.modules.945432672" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
@@ -82,6 +71,17 @@
 							<inputType id="nvcc.compiler.input.cu.733620888" superClass="nvcc.compiler.input.cu"/>
 							<inputType id="nvcc.compiler.input.cpp.728432960" superClass="nvcc.compiler.input.cpp"/>
 							<inputType id="nvcc.compiler.input.c.1831386140" superClass="nvcc.compiler.input.c"/>
+						</tool>
+					</fileInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1675350992" name="mesh.cu" rcbsApplicability="disable" resourcePath="src/mesh.cu" toolsToInvoke="nvcc.compiler.base.971005232.1250776189">
+						<tool id="nvcc.compiler.base.971005232.1250776189" name="NVCC Compiler" superClass="nvcc.compiler.base.971005232">
+							<option id="nvcc.compiler.modules.130565053" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
+								<listOptionValue builtIn="false" value="3"/>
+							</option>
+							<option id="nvcc.compiler.isintarget.1150675791" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
+							<inputType id="nvcc.compiler.input.cu.1994853696" superClass="nvcc.compiler.input.cu"/>
+							<inputType id="nvcc.compiler.input.cpp.1933523974" superClass="nvcc.compiler.input.cpp"/>
+							<inputType id="nvcc.compiler.input.c.374512608" superClass="nvcc.compiler.input.c"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239.1992625164" name="sphere_light.cu" rcbsApplicability="disable" resourcePath="src/sphere_light.cu" toolsToInvoke="nvcc.compiler.base.971005232.1940144725">

@@ -131,7 +131,7 @@ int main(int argc, char **argv){
 	c.setAnyHitProgram(PathRay, app_loc+"path.ptx", "path_ignore_alpha");
 
 	c.setClosestHitProgram(LightPathRay, app_loc+"path.ptx", "lightPathTrace");
-	c.setClosestHitProgram(LightPathRay, app_loc+"path.ptx", "lightPathTrace");
+	c.setAnyHitProgram(LightPathRay, app_loc+"path.ptx", "path_ignore_alpha");
 
 	c.setAnyHitProgram(ShadowRay, app_loc+"path.ptx", "shadow_probe");
 
