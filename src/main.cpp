@@ -12,7 +12,10 @@
 #define STEP 2.f
 #define ANG_STEP 0.1f
 
-
+enum RayGenPrograms{
+	CameraRayGen,
+	LightRayGen
+};
 
 using namespace optix;
 using namespace std;
@@ -33,13 +36,16 @@ void reshape(int nw, int nh){
 	glViewport(0, 0, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
 	output->setSize(w, h);
+	Buffer light_path_buffer = optix_context["lightPathBuffer"]->getBuffer();
+	light_path_buffer->setSize(w, h, LIGHT_PATH_LENGTH);
 	frame=1;
 	optix_context["frame"]->setInt(frame);
 }
 
 void renderScene(){
 	glClear(GL_COLOR_BUFFER_BIT);
-	optix_context->launch(0, w, h);
+	optix_context->launch(LightRayGen, w, h);
+	optix_context->launch(CameraRayGen, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
 	void *pixels=output->map();
 	glDrawPixels(w, h, GL_RGBA, GL_FLOAT, pixels);
@@ -158,11 +164,15 @@ int main(int argc, char **argv){
 	l_loader.light_mat->setClosestHitProgram(LightPathRay, oc->createProgramFromPTXFile(app_loc+"path.ptx", "lightPathHitLight"));
 
 	Program camera = oc->createProgramFromPTXFile(app_loc+"path.ptx", "camera");
+	Program light_path = oc->createProgramFromPTXFile(app_loc+"path.ptx", "light_path_gen");
+
 	Program exception = oc->createProgramFromPTXFile(app_loc+"path.ptx", "exception");
-	oc->setEntryPointCount(1);
+	oc->setEntryPointCount(2);
 	oc->setRayGenerationProgram(0, camera);
+	oc->setRayGenerationProgram(1, light_path);
 	oc->setExceptionProgram(0, exception);
-	oc->setExceptionEnabled(RT_EXCEPTION_ALL, true);
+	oc->setExceptionProgram(1, exception);
+	//oc->setExceptionEnabled(RT_EXCEPTION_ALL, true);
 
 	oc["frame"]->setInt(frame);
 
@@ -175,13 +185,13 @@ int main(int argc, char **argv){
 	oc["V"]->setFloat(up);
 	oc["W"]->setFloat(W);
 
-	Buffer lightPathBuffer = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER);
+	Buffer lightPathBuffer = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_USER);
 	lightPathBuffer->setElementSize(sizeof(struct LightPathResult));
 	lightPathBuffer->setSize(w, h, LIGHT_PATH_LENGTH);
 	oc["lightPathBuffer"]->set(lightPathBuffer);
 
 
-	oc->setStackSize(16000);
+	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
 
 	Group g = oc->createGroup();

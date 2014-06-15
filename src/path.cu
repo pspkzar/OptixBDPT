@@ -22,7 +22,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 1
+#define MIN_DEPTH 3
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -62,157 +62,169 @@ rtDeclareVariable(rtObject, top_object, , );
 
 rtDeclareVariable(float, scene_epsilon, , )=1.f;
 
-RT_PROGRAM void camera(){
+
+RT_PROGRAM void light_path_gen(){
 	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
+	//TODO calculate light path
+	SphereLight l = lights[0];
+	float l1 = rnd(seed)*2.f-1.f;
+	float l2 = rnd(seed)*2.f-1.f;
+	while(l1*l1+l2*l2>=1.f){
+		l1 = rnd(seed)*2.f-1.f;
+		l2 = rnd(seed)*2.f-1.f;
+	}
+
+	float3 light_normal;
+	light_normal.x = 2.f * l1 * sqrtf(1.f - l1*l1 - l2*l2);
+	light_normal.y = 2.f * l2 * sqrtf(1.f - l1*l1 - l2*l2);
+	light_normal.z = 1.f - 2.f * (l1*l1 + l2*l2);
+
+	float3 light_point = make_float3(l.pos) + l.pos.z * light_normal;
+
+	l1 = rnd(seed);
+	l2 = rnd(seed);
+
+	float3 light_dir;
+	optix::cosine_sample_hemisphere(l1, l2, light_dir);
+	optix::Onb onb_light(light_normal);
+	onb_light.inverse_transform(light_dir);
+
+	Ray light_ray = optix::make_Ray(light_point, light_dir, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+
+	LightPathResult result0;
+	result0.radiance=l.color;
+	result0.In=light_dir;
+
+	rtTrace(top_object, light_ray, result0);
+	lightPathBuffer[make_uint3(launch_index, 0)]=result0;
+
+	int i=1;
+
+	while((i < LIGHT_PATH_LENGTH) && (!lightPathBuffer[make_uint3(launch_index, i-1)].missed)){
 
 
-	{
-		//TODO calculate light path
-		SphereLight l = lights[0];
-		float l1 = rnd(seed)*2.f-1.f;
-		float l2 = rnd(seed)*2.f-1.f;
-		while(l1*l1+l2*l2>=1.f){
-			l1 = rnd(seed)*2.f-1.f;
-			l2 = rnd(seed)*2.f-1.f;
+		float4 diff_coef = lightPathBuffer[make_uint3(launch_index, i-1)].Kd;
+		float4 spec_coef = lightPathBuffer[make_uint3(launch_index, i-1)].Ks;
+
+		float3 position = lightPathBuffer[make_uint3(launch_index, i-1)].position;
+
+		float3 ffnormal = optix::faceforward(lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
+
+		//check refraction
+		float3 refracted = make_float3(0.f);
+		float reflectance;
+		if(lightPathBuffer[make_uint3(launch_index, i-1)].Ni>0 && optix::refract(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].Ni)){
+			float cos_theta = dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
+			if(cos_theta<0.f)
+				cos_theta = -cos_theta;
+			else
+				cos_theta = dot(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
+			float r0 = powf((1.f-lightPathBuffer[make_uint3(launch_index, i-1)].Ni)/(1.f+lightPathBuffer[make_uint3(launch_index, i-1)].Ni), 2.f);
+			reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
+
 		}
+		else reflectance = 1.f;
 
-		float3 light_normal;
-		light_normal.x = 2.f * l1 * sqrtf(1.f - l1*l1 - l2*l2);
-		light_normal.y = 2.f * l2 * sqrtf(1.f - l1*l1 - l2*l2);
-		light_normal.z = 1.f - 2.f * (l1*l1 + l2*l2);
+		float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
+		float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
+		pspec*=fminf(1.f, optix::dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal)*(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
 
-		float3 light_point = make_float3(l.pos) + l.pos.z * light_normal;
+		//randomly select the type of contribution
+		float r=rnd(seed);
+		float p_reflect = rnd(seed);
 
-		l1 = rnd(seed);
-		l2 = rnd(seed);
-
-		float3 light_dir;
-		optix::cosine_sample_hemisphere(l1, l2, light_dir);
-		optix::Onb onb_light(light_normal);
-		onb_light.inverse_transform(light_dir);
-
-		Ray light_ray = optix::make_Ray(light_point, light_dir, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
-		lightPathBuffer[make_uint3(launch_index, 0)].radiance=l.color;
-		lightPathBuffer[make_uint3(launch_index, 0)].In=light_dir;
-		rtTrace(top_object, light_ray, lightPathBuffer[make_uint3(launch_index, 0)]);
-
-		int i=1;
-
-		while((i < LIGHT_PATH_LENGTH) && (!lightPathBuffer[make_uint3(launch_index, i-1)].missed)){
-
-
-			float4 diff_coef = lightPathBuffer[make_uint3(launch_index, i-1)].Kd;
-			float4 spec_coef = lightPathBuffer[make_uint3(launch_index, i-1)].Ks;
-
-			float3 position = lightPathBuffer[make_uint3(launch_index, i-1)].position;
-
-			float3 ffnormal = optix::faceforward(lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
-
-			//check refraction
-			float3 refracted = make_float3(0.f);
-			float reflectance;
-			if(lightPathBuffer[make_uint3(launch_index, i-1)].Ni>0 && optix::refract(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].Ni)){
-				float cos_theta = dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
-				if(cos_theta<0.f)
-					cos_theta = -cos_theta;
-				else
-					cos_theta = dot(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
-				float r0 = powf((1.f-lightPathBuffer[make_uint3(launch_index, i-1)].Ni)/(1.f+lightPathBuffer[make_uint3(launch_index, i-1)].Ni), 2.f);
-				reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
-
-			}
-			else reflectance = 1.f;
-
-			float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
-			float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
-			pspec*=fminf(1.f, optix::dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal)*(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
-
-			//randomly select the type of contribution
-			float r=rnd(seed);
-			float p_reflect = rnd(seed);
-
-			if(p_reflect<reflectance){
-				if(r<pdiff+pspec){
-					if(r<pdiff){
-						lightPathBuffer[make_uint3(launch_index, i)].radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
-						float3 new_dir;
-						optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
-						optix::Onb onb(ffnormal);
-						onb.inverse_transform(new_dir);
-						lightPathBuffer[make_uint3(launch_index, i)].In=new_dir;
-						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
-						rtTrace(top_object, new_ray, lightPathBuffer[make_uint3(launch_index, i)]);
-					}
-					else{
-						float u1=rnd(seed);
-						float u2=rnd(seed);
-						float3 dir;
-						dir.x = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*cosf(M_2_PIf*u2);
-						dir.y = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*sinf(M_2_PIf*u2);
-						dir.z = powf(u1, 1.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
-						optix::Onb onb(optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal));
-						onb.inverse_transform(dir);
-
-						lightPathBuffer[make_uint3(launch_index, i)].In=dir;
-						float intensity=optix::dot(dir, ffnormal);
-						//verify if sampled direction is above surface
-						if(intensity>0.f){
-							lightPathBuffer[make_uint3(launch_index, i)].radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * powf(dot(optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal), lightPathBuffer[make_uint3(launch_index, i)].In), lightPathBuffer[make_uint3(launch_index, i-1)].Ns) * (spec_coef/pspec) * intensity;
-							Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
-						}
-						else{
-							lightPathBuffer[make_uint3(launch_index, i)].missed=true;
-						}
-					}
+		if(p_reflect<reflectance){
+			if(r<pdiff+pspec){
+				if(r<pdiff){
+					LightPathResult result;
+					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
+					float3 new_dir;
+					optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
+					optix::Onb onb(ffnormal);
+					onb.inverse_transform(new_dir);
+					result.In=new_dir;
+					Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+					rtTrace(top_object, new_ray, result);
+					lightPathBuffer[make_uint3(launch_index, i)]=result;
 				}
 				else{
-					lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+					float u1=rnd(seed);
+					float u2=rnd(seed);
+					float3 dir;
+					dir.x = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*cosf(M_2_PIf*u2);
+					dir.y = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*sinf(M_2_PIf*u2);
+					dir.z = powf(u1, 1.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
+					optix::Onb onb(optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal));
+					onb.inverse_transform(dir);
+					LightPathResult result;
+					result.In=dir;
+					float intensity=optix::dot(dir, ffnormal);
+					//verify if sampled direction is above surface
+					if(intensity>0.f){
+						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * powf(dot(optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal), lightPathBuffer[make_uint3(launch_index, i)].In), lightPathBuffer[make_uint3(launch_index, i-1)].Ns) * (spec_coef/pspec) * intensity;
+						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+						rtTrace(top_object, new_ray, result);
+						lightPathBuffer[make_uint3(launch_index, i)]=result;
+					}
+					else{
+						lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+					}
 				}
 			}
 			else{
-				if(r<pdiff+pspec){
-					if(r<pdiff){
-						lightPathBuffer[make_uint3(launch_index, i)].radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
-						float3 new_dir;
-						optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
-						optix::Onb onb(-ffnormal);
-						onb.inverse_transform(new_dir);
-						lightPathBuffer[make_uint3(launch_index, i)].In=new_dir;
-						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
-						rtTrace(top_object, new_ray, lightPathBuffer[make_uint3(launch_index, i)]);
-					}
-					else{
-						float u1=rnd(seed);
-						float u2=rnd(seed);
-						float3 dir;
-						dir.x = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*cosf(M_2_PIf*u2);
-						dir.y = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*sinf(M_2_PIf*u2);
-						dir.z = powf(u1, 1.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
-						optix::Onb onb(refracted);
-						onb.inverse_transform(dir);
-
-						lightPathBuffer[make_uint3(launch_index, i)].In=dir;
-						float intensity=optix::dot(dir, ffnormal);
-						//verify if sampled direction is above surface
-						if(intensity>0.f){
-							lightPathBuffer[make_uint3(launch_index, i)].radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * powf(dot(refracted, lightPathBuffer[make_uint3(launch_index, i)].In), lightPathBuffer[make_uint3(launch_index, i-1)].Ns) * (spec_coef/pspec) * intensity;
-							Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
-						}
-						else{
-							lightPathBuffer[make_uint3(launch_index, i)].missed=true;
-						}
-					}
+				lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+			}
+		}
+		else{
+			if(r<pdiff+pspec){
+				if(r<pdiff){
+					LightPathResult result;
+					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
+					float3 new_dir;
+					optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
+					optix::Onb onb(-ffnormal);
+					onb.inverse_transform(new_dir);
+					result.In=new_dir;
+					Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+					rtTrace(top_object, new_ray, result);
+					lightPathBuffer[make_uint3(launch_index, i)]=result;
 				}
 				else{
-					lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+					LightPathResult result;
+					float u1=rnd(seed);
+					float u2=rnd(seed);
+					float3 dir;
+					dir.x = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*cosf(M_2_PIf*u2);
+					dir.y = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*sinf(M_2_PIf*u2);
+					dir.z = powf(u1, 1.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
+					optix::Onb onb(refracted);
+					onb.inverse_transform(dir);
+
+					result.In=dir;
+					float intensity=optix::dot(dir, ffnormal);
+					//verify if sampled direction is above surface
+					if(intensity>0.f){
+						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * powf(dot(refracted, lightPathBuffer[make_uint3(launch_index, i)].In), lightPathBuffer[make_uint3(launch_index, i-1)].Ns) * (spec_coef/pspec) * intensity;
+						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
+						rtTrace(top_object, new_ray, result);
+						lightPathBuffer[make_uint3(launch_index, i)]=result;
+					}
+					else{
+						lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+					}
 				}
 			}
-
-			i++;
+			else{
+				lightPathBuffer[make_uint3(launch_index, i)].missed=true;
+			}
 		}
+
+		i++;
 	}
+}
 
-
+RT_PROGRAM void camera(){
+	unsigned int seed = tea<16>(launch_dim.x*launch_index.y+launch_index.x, frame);
 
 	float2 inv_screen=1.f/(make_float2(launch_dim)) *2.f;
 	float2 pixel = (make_float2(launch_index)) * inv_screen - 1.f;
