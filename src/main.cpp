@@ -137,7 +137,7 @@ int main(int argc, char **argv){
 
 	SphereLight lights[1];
 	lights[0].color=make_float4(80.f);
-	lights[0].pos=make_float4(0.f, 1.f, 0.f, 0.1f);
+	lights[0].pos=make_float4(0.f, 0.5f, 0.f, 0.1f);
 
 	SphereLightLoader l_loader(lights, 1, oc);
 	l_loader.light_geom->setBoundingBoxProgram(oc->createProgramFromPTXFile(app_loc+"sphere_light.ptx", "sphere_light_bounding_box"));
