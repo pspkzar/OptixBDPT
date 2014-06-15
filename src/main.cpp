@@ -12,7 +12,7 @@
 #define STEP 2.f
 #define ANG_STEP 0.1f
 
-#define LIGHT_PATH_LENGTH 1
+
 
 using namespace optix;
 using namespace std;
@@ -177,7 +177,7 @@ int main(int argc, char **argv){
 
 	Buffer lightPathBuffer = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_USER);
 	lightPathBuffer->setElementSize(sizeof(struct LightPathResult));
-	lightPathBuffer->setSize(LIGHT_PATH_LENGTH);
+	lightPathBuffer->setSize(w, h, LIGHT_PATH_LENGTH);
 	oc["lightPathBuffer"]->set(lightPathBuffer);
 
 

@@ -6,6 +6,8 @@
 #include <vector_types.h>
 #include "sphere_light_common.h"
 
+#define LIGHT_PATH_LENGTH 3
+
 enum RayTypes{
 	PathRay,
 	ShadowRay,
