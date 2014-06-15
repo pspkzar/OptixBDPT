@@ -25,7 +25,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 3
+#define MIN_DEPTH 5
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -63,7 +63,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.01f;
+rtDeclareVariable(float, scene_epsilon, , )=0.001f;
 
 
 RT_PROGRAM void light_path_gen(){
@@ -130,7 +130,7 @@ RT_PROGRAM void light_path_gen(){
 
 		float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
 		float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
-		pspec*=fminf(1.f, optix::dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal)*(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
+		pspec*=fminf(1.f, optix::dot(-lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal)*(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
 
 		//randomly select the type of contribution
 		float r=rnd(seed);
@@ -365,7 +365,7 @@ RT_PROGRAM void glossy_shading(){
 		else
 			cos_theta = dot(refracted, shading_normal);
 		float r0 = powf((1.f-Ni)/(1.f+Ni), 2.f);
-		reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
+		reflectance = r0 + (1.f-r0)*powf(1-cos_theta, 5.f);
 
 	}
 	else reflectance = 1.f;
@@ -495,7 +495,7 @@ RT_PROGRAM void glossy_shading(){
 
 	float pdiff=(pkd.x+pkd.y+pkd.z)*0.33333333333333333333333333333f;
 	float pspec=(pks.x+pks.y+pks.z)*0.33333333333333333333333333333f;
-	pspec*=fminf(1.f, optix::dot(current_ray.direction, ffnormal)*(Ns+2.f)/(Ns+1.f));
+	pspec*=fminf(1.f, optix::dot(-current_ray.direction, ffnormal)*(Ns+2.f)/(Ns+1.f));
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
@@ -559,7 +559,7 @@ RT_PROGRAM void glossy_shading(){
 
 		if(r<pdiff+pspec){
 			//select diffuse sample
-			if(false){//r<pdiff){
+			if(r<pdiff){
 
 				float u1=rnd(current_path_result.seed);
 				float u2=rnd(current_path_result.seed);
