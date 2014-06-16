@@ -25,7 +25,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 5
+#define MIN_DEPTH 3
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -63,7 +63,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.001f;
+rtDeclareVariable(float, scene_epsilon, , )=1.f;
 
 
 RT_PROGRAM void light_path_gen(){
@@ -146,7 +146,7 @@ RT_PROGRAM void light_path_gen(){
 			if(r<pdiff+pspec){
 				if(r<pdiff){
 					LightPathResult result;
-					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
+					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff;
 					float3 new_dir;
 					optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
 					optix::Onb onb(ffnormal);
@@ -170,7 +170,7 @@ RT_PROGRAM void light_path_gen(){
 					float intensity=optix::dot(dir, ffnormal);
 					//verify if sampled direction is above surface
 					if(intensity>0.f){
-						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * (spec_coef/pspec) * intensity;
+						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * ((lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)) * (spec_coef/pspec) * intensity;
 						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
 						rtTrace(top_object, new_ray, result);
 						lightPathBuffer[make_uint3(launch_index, i)]=result;
@@ -188,7 +188,7 @@ RT_PROGRAM void light_path_gen(){
 			if(r<pdiff+pspec){
 				if(r<pdiff){
 					LightPathResult result;
-					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff * dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
+					result.radiance = lightPathBuffer[make_uint3(launch_index, i-1)].radiance * diff_coef/pdiff;
 					float3 new_dir;
 					optix::cosine_sample_hemisphere(rnd(seed), rnd(seed), new_dir);
 					optix::Onb onb(-ffnormal);
@@ -210,10 +210,10 @@ RT_PROGRAM void light_path_gen(){
 					onb.inverse_transform(dir);
 
 					result.In=dir;
-					float intensity=optix::dot(dir, ffnormal);
+					float intensity=optix::dot(dir, -ffnormal);
 					//verify if sampled direction is above surface
 					if(intensity>0.f){
-						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * (spec_coef/pspec) * intensity;
+						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * ((lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)) * (spec_coef/pspec) * intensity;
 						Ray new_ray = optix::make_Ray(lightPathBuffer[make_uint3(launch_index, i-1)].position, lightPathBuffer[make_uint3(launch_index, i)].In, LightPathRay, scene_epsilon, RT_DEFAULT_MAX);
 						rtTrace(top_object, new_ray, result);
 						lightPathBuffer[make_uint3(launch_index, i)]=result;
@@ -458,7 +458,7 @@ RT_PROGRAM void glossy_shading(){
 			float out_intensity = abs(dot(lightPathBuffer[lindex].In, lightPathBuffer[lindex].normal));
 
 			float4 out_rad_diff = lightPathBuffer[lindex].radiance * lightPathBuffer[lindex].Kd * M_1_PIf;;
-			float4 out_rad_spec = lightPathBuffer[lindex].radiance * lightPathBuffer[lindex].Ks * spec_intensity * (lightPathBuffer[lindex].Ns + 2) * 0.5 * M_1_PIf;
+			float4 out_rad_spec = lightPathBuffer[lindex].radiance * lightPathBuffer[lindex].Ks * spec_intensity * (lightPathBuffer[lindex].Ns + 2.f) * 0.5 * M_1_PIf;
 
 			float4 out_rad = (out_rad_diff+out_rad_spec) * out_intensity;
 
@@ -479,7 +479,7 @@ RT_PROGRAM void glossy_shading(){
 				}
 			}
 
-			float4 in_rad_diff = out_rad * diff_coef;
+			float4 in_rad_diff = out_rad * diff_coef * M_1_PIf;
 			float4 in_rad_spec = out_rad * spec_coef * in_spec_intensity * (Ns + 2) * 0.5 * M_1_PIf;
 
 			float4 in_rad = (in_rad_diff+in_rad_spec) * in_intensity * abs(dot(dir, lightPathBuffer[lindex].normal)) / (tdist*tdist);
