@@ -193,6 +193,9 @@ int main(int argc, char **argv){
 
 	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
+	oc->setPrintLaunchIndex(400,400);
+	oc->setPrintBufferSize(7995462);
+
 
 	Group g = oc->createGroup();
 	g->setChildCount(2);
