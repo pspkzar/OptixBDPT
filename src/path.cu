@@ -63,7 +63,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=1.f;
+rtDeclareVariable(float, scene_epsilon, , )=0.01f;
 
 
 RT_PROGRAM void light_path_gen(){
@@ -116,17 +116,19 @@ RT_PROGRAM void light_path_gen(){
 		//check refraction
 		float3 refracted = make_float3(0.f);
 		float reflectance;
-		if(lightPathBuffer[make_uint3(launch_index, i-1)].Ni>0 && optix::refract(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].Ni)){
+		if(lightPathBuffer[make_uint3(launch_index, i-1)].Ni>0.f && optix::refract(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].Ni)){
 			float cos_theta = dot(lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
 			if(cos_theta<0.f)
 				cos_theta = -cos_theta;
 			else
 				cos_theta = dot(refracted, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
-			float r0 = powf((1.f-lightPathBuffer[make_uint3(launch_index, i-1)].Ni)/(1.f+lightPathBuffer[make_uint3(launch_index, i-1)].Ni), 2.f);
-			reflectance = r0 + (1.f-r0)*optix::fresnel_schlick(cos_theta);
+			float r0 = ((1.f-lightPathBuffer[make_uint3(launch_index, i-1)].Ni)/(1.f+lightPathBuffer[make_uint3(launch_index, i-1)].Ni))*((1.f-lightPathBuffer[make_uint3(launch_index, i-1)].Ni)/(1.f+lightPathBuffer[make_uint3(launch_index, i-1)].Ni));
+			reflectance = r0 + (1.f-r0)*powf(1.f-cos_theta, 5.f);
 
 		}
 		else reflectance = 1.f;
+
+
 
 		float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
 		float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
@@ -346,7 +348,7 @@ RT_PROGRAM void glossy_shading(){
 	float4 spec_coef = Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
 
 	float dc = (diff_coef.x + diff_coef.y + diff_coef.z)*0.33333333333333333333333333333f;
-	float ds =(spec_coef.x + spec_coef.y + spec_coef.z)*0.33333333333333333333333333333f;
+	float ds = (spec_coef.x + spec_coef.y + spec_coef.z)*0.33333333333333333333333333333f;
 
 	float weight = (ds/(dc+ds))*.5f + 0.5f;
 
@@ -364,7 +366,7 @@ RT_PROGRAM void glossy_shading(){
 			cos_theta = -cos_theta;
 		else
 			cos_theta = dot(refracted, shading_normal);
-		float r0 = powf((1.f-Ni)/(1.f+Ni), 2.f);
+		float r0 = ((1.f-Ni)/(1.f+Ni))*((1.f-Ni)/(1.f+Ni));
 		reflectance = r0 + (1.f-r0)*powf(1-cos_theta, 5.f);
 
 	}
@@ -426,6 +428,7 @@ RT_PROGRAM void glossy_shading(){
 		}
 	}
 
+	if(weight<1.f){
 	for(int i=0 ; i<LIGHT_PATH_LENGTH; i++){
 		uint3 lindex = make_uint3(launch_index, i);
 		if(lightPathBuffer[lindex].missed) break;
@@ -441,9 +444,26 @@ RT_PROGRAM void glossy_shading(){
 		rtTrace(top_object, shadow_r, sres);
 		if(!sres.in_shadow){
 
+
+			//check refraction
+			float3 out_refracted = make_float3(0.f);
+			float out_reflectance;
+			if(lightPathBuffer[lindex].Ni>0.f && optix::refract(out_refracted, lightPathBuffer[lindex].In, lightPathBuffer[lindex].normal, lightPathBuffer[lindex].Ni)){
+				float cos_theta = dot(lightPathBuffer[lindex].In, lightPathBuffer[lindex].normal);
+				if(cos_theta<0.f)
+					cos_theta = -cos_theta;
+				else
+					cos_theta = dot(out_refracted, lightPathBuffer[lindex].normal);
+				float r0 = ((1.f-lightPathBuffer[lindex].Ni)/(1.f+lightPathBuffer[lindex].Ni))*((1.f-lightPathBuffer[lindex].Ni)/(1.f+lightPathBuffer[lindex].Ni));
+
+				out_reflectance = r0 + (1.f-r0)*powf(1.f-cos_theta, 5.f);
+
+			}
+			else out_reflectance = 1.f;
+
 			float3 spec_dir;
 			float spec_intensity;
-			if(dot(lightPathBuffer[lindex].In, dir)>0){
+			if(dot(dir, lightPathBuffer[lindex].In)>0.f){
 				spec_dir=optix::reflect(lightPathBuffer[lindex].In, lightPathBuffer[lindex].normal);
 				spec_intensity=fmaxf(0.f,powf(dot(spec_dir, -dir), lightPathBuffer[lindex].Ns));
 			}
@@ -461,12 +481,15 @@ RT_PROGRAM void glossy_shading(){
 			float4 out_rad_spec = lightPathBuffer[lindex].radiance * lightPathBuffer[lindex].Ks * spec_intensity * (lightPathBuffer[lindex].Ns + 2.f) * 0.5 * M_1_PIf;
 
 			float4 out_rad = (out_rad_diff+out_rad_spec) * out_intensity;
+			if(dot(dir, lightPathBuffer[lindex].In)>0.f) out_rad *= out_reflectance;
+			else out_rad *= (1.f - out_reflectance);
+
 
 			float in_intensity = abs(dot(dir, ffnormal));
 
 
 			float in_spec_intensity;
-			if(dot(current_ray.direction, dir)<0){
+			if(dot(current_ray.direction, dir)<0.f){
 				in_spec_intensity = fmaxf(0.f, powf(dot(optix::reflect(current_ray.direction, ffnormal),dir), Ns));
 			}
 			else{
@@ -483,9 +506,17 @@ RT_PROGRAM void glossy_shading(){
 			float4 in_rad_spec = out_rad * spec_coef * in_spec_intensity * (Ns + 2) * 0.5 * M_1_PIf;
 
 			float4 in_rad = (in_rad_diff+in_rad_spec) * in_intensity * abs(dot(dir, lightPathBuffer[lindex].normal)) / (tdist*tdist);
+			if(dot(current_ray.direction, dir)<0.f) in_rad *= reflectance;
+			else in_rad *= 1.f - reflectance;
 
 			current_path_result.result+=in_rad * current_path_result.weight * (1.f-weight);
 		}
+	}
+	}
+
+	if(weight==0.f) {
+		current_path_result.finished=true;
+		return;
 	}
 
 	current_path_result.weight*=weight;
