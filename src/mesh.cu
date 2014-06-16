@@ -79,7 +79,7 @@ RT_PROGRAM void intersectMesh(int primIdx){
 			if(dx>0.f || dy >0.f){
 				float3 o = normalize(-dx*tmp_tangent + dy*tmp_bitangent - sqrtf(dx*dx + dy*dy) * tmp_normal);
 				float3 s = normalize(cross(tmp_normal, o));
-				tmp_normal= cross(o,s);
+				tmp_normal= normalize(cross(o,s));
 
 			}
 

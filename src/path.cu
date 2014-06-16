@@ -63,7 +63,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.01f;
+rtDeclareVariable(float, scene_epsilon, , )=0.0001f;
 
 
 RT_PROGRAM void light_path_gen(){
@@ -72,7 +72,7 @@ RT_PROGRAM void light_path_gen(){
 	SphereLight l = lights[0];
 	float l1 = rnd(seed)*2.f-1.f;
 	float l2 = rnd(seed)*2.f-1.f;
-	while(l1*l1+l2*l2>=1.f){
+	while((l1*l1+l2*l2)>=1.f){
 		l1 = rnd(seed)*2.f-1.f;
 		l2 = rnd(seed)*2.f-1.f;
 	}
@@ -111,7 +111,7 @@ RT_PROGRAM void light_path_gen(){
 
 		float3 position = lightPathBuffer[make_uint3(launch_index, i-1)].position;
 
-		float3 ffnormal = optix::faceforward(lightPathBuffer[make_uint3(launch_index, i-1)].normal, lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
+		float3 ffnormal = optix::faceforward(lightPathBuffer[make_uint3(launch_index, i-1)].normal, -lightPathBuffer[make_uint3(launch_index, i-1)].In, lightPathBuffer[make_uint3(launch_index, i-1)].normal);
 
 		//check refraction
 		float3 refracted = make_float3(0.f);
@@ -131,7 +131,7 @@ RT_PROGRAM void light_path_gen(){
 
 
 		float pdiff=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
-		float pspec=(diff_coef.x+diff_coef.y+diff_coef.z)*0.33333333333333333333333333333f;
+		float pspec=(spec_coef.x+spec_coef.y+spec_coef.z)*0.33333333333333333333333333333f;
 		pspec*=fminf(1.f, optix::dot(-lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal)*(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
 
 		//randomly select the type of contribution
@@ -165,11 +165,13 @@ RT_PROGRAM void light_path_gen(){
 					dir.x = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*cosf(M_2_PIf*u2);
 					dir.y = sqrtf(1-powf(u1, 2.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)))*sinf(M_2_PIf*u2);
 					dir.z = powf(u1, 1.f/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f));
-					optix::Onb onb(optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal));
+					float3 reflected = optix::reflect(lightPathBuffer[make_uint3(launch_index, i-1)].In, ffnormal);
+					optix::Onb onb(reflected);
 					onb.inverse_transform(dir);
 					LightPathResult result;
 					result.In=dir;
 					float intensity=optix::dot(dir, ffnormal);
+
 					//verify if sampled direction is above surface
 					if(intensity>0.f){
 						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * ((lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)) * (spec_coef/pspec) * intensity;
@@ -187,6 +189,7 @@ RT_PROGRAM void light_path_gen(){
 			}
 		}
 		else{
+
 			if(r<pdiff+pspec){
 				if(r<pdiff){
 					LightPathResult result;
@@ -212,7 +215,8 @@ RT_PROGRAM void light_path_gen(){
 					onb.inverse_transform(dir);
 
 					result.In=dir;
-					float intensity=optix::dot(dir, -ffnormal);
+					float intensity=optix::dot(-dir, ffnormal);
+
 					//verify if sampled direction is above surface
 					if(intensity>0.f){
 						result.radiance =lightPathBuffer[make_uint3(launch_index, i-1)].radiance * ((lightPathBuffer[make_uint3(launch_index, i-1)].Ns+2.f)/(lightPathBuffer[make_uint3(launch_index, i-1)].Ns+1.f)) * (spec_coef/pspec) * intensity;
@@ -487,7 +491,6 @@ RT_PROGRAM void glossy_shading(){
 				if(dot(dir, lightPathBuffer[lindex].In)>0.f) out_rad *= out_reflectance;
 				else out_rad *= (1.f - out_reflectance);
 
-				//rtPrintf("Out Spec: %f %f %f\n", out_rad_spec.x, out_rad_spec.y, out_rad_spec.z);
 
 				float in_intensity = abs(dot(dir, ffnormal));
 
@@ -509,9 +512,7 @@ RT_PROGRAM void glossy_shading(){
 				float4 in_rad_diff = out_rad * diff_coef * M_1_PIf;
 				float4 in_rad_spec = out_rad * spec_coef * in_spec_intensity * (Ns + 2) * 0.5 * M_1_PIf;
 
-				//rtPrintf("In Spec: %f %f %f\n", in_rad_spec.x, in_rad_spec.y, in_rad_spec.z);
-
-				float4 in_rad = (in_rad_diff+in_rad_spec) * in_intensity * abs(dot(dir, lightPathBuffer[lindex].normal)) / (tdist*tdist);
+				float4 in_rad = (in_rad_diff+in_rad_spec) * in_intensity * fminf(abs(dot(dir, lightPathBuffer[lindex].normal)) / (tdist*tdist), 1.f);
 				if(dot(current_ray.direction, dir)<0.f) in_rad *= reflectance;
 				else in_rad *= 1.f - reflectance;
 
@@ -521,10 +522,6 @@ RT_PROGRAM void glossy_shading(){
 		}
 		if(light_path_contribution.x+light_path_contribution.y+light_path_contribution.z==0.f){
 			weight=1.f;
-			//rtPrintf("Light Path Rejected.\n");
-		}
-		else{
-			//rtPrintf("Light Path contribution: %f %f %f %f \n", light_path_contribution.x, light_path_contribution.y, light_path_contribution.z, weight);
 		}
 	}
 
