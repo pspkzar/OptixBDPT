@@ -160,7 +160,7 @@ RT_PROGRAM void glossy_shading(){
 			cos_theta = -cos_theta;
 		else
 			cos_theta = dot(refracted, shading_normal);
-		float r0 = powf((1.f-Ni)/(1.f+Ni), 2.f);
+		float r0 = ((1.f-Ni)/(1.f+Ni)) * ((1.f-Ni)/(1.f+Ni));
 		reflectance = r0 + (1.f-r0)*powf(1.f-cos_theta, 5.f);
 
 	}
