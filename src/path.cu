@@ -63,7 +63,7 @@ rtBuffer<float4, 2> output;
 rtDeclareVariable(rtObject, top_object, , );
 
 
-rtDeclareVariable(float, scene_epsilon, , )=0.0001f;
+rtDeclareVariable(float, scene_epsilon, , )=0.01f;
 
 
 RT_PROGRAM void light_path_gen(){
