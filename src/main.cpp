@@ -1,5 +1,6 @@
 #include <optix_world.h>
 #include <optixu/optixpp_namespace.h>
+#include <sstream>
 #include "commonStructs.h"
 #include "OptixContext.h"
 #include "SphereLightLoader.h"
@@ -19,7 +20,7 @@ int w = 800, h=800;
 int frame=1;
 Context optix_context;
 
-float3 eye=make_float3(0.f, 0.f, 0.f);
+float3 eye=make_float3(0.f, 0.8f, 2.f);
 float3 up=make_float3(0.f,1.f,0.f);
 float3 W=make_float3(0.f, 0.f, -1.f);
 
@@ -44,6 +45,30 @@ void renderScene(){
 	output->unmap();
 	optix_context["frame"]->setInt(++frame);
 	glutSwapBuffers();
+}
+
+void screenshot(int time){
+	void * pixels = optix_context["output"]->getBuffer()->map();
+	ILuint image = ilGenImage();
+	ilBindImage(image);
+	ilTexImage(w, h, 1, 4, IL_RGBA, IL_FLOAT, pixels);
+
+	//iluFlipImage();
+
+	ilEnable(IL_FILE_OVERWRITE);
+	stringstream str;
+	str << "res" << time << ".hdr";
+
+	string filename;
+	str >> filename;
+
+	ilSave(IL_HDR, filename.c_str());
+
+	ilDeleteImage(image);
+	ilBindImage(0);
+	optix_context["output"]->getBuffer()->unmap();
+
+	cout << ilGetError() << endl;
 }
 
 void keyboard(unsigned char key, int x, int y){
@@ -72,7 +97,7 @@ void keyboard(unsigned char key, int x, int y){
     case 'j':
         W=normalize(W-ANG_STEP*U);
         break;
-    case 'x':
+    case 'x':{
     	void * pixels = optix_context["output"]->getBuffer()->map();
     	ILuint image = ilGenImage();
     	ilBindImage(image);
@@ -90,7 +115,11 @@ void keyboard(unsigned char key, int x, int y){
 
     	cout << ilGetError() << endl;
     	return;
-
+    }
+    case 'c':
+    	cout << "Pos: " << eye.x << " " << eye.y << " " << eye.z << endl;
+    	cout << "Up: " << up.x << " " << up.y << " " << up.z << endl;
+    	cout << "W: " << W.x << " " << W.y << " " << W.z << endl;
     }
 
     U=normalize(cross(up,-W));
@@ -160,8 +189,12 @@ int main(int argc, char **argv){
 
 	//set camera variables
 	oc["eye"]->setFloat(eye);
-	oc["U"]->setFloat(normalize(cross(-W, up)));
-	oc["V"]->setFloat(up);
+
+	float3 U=normalize(cross(up,-W));
+	float3 V=cross(-W, U);
+
+	oc["U"]->setFloat(U);
+	oc["V"]->setFloat(V);
 	oc["W"]->setFloat(W);
 
 	oc->setStackSize(4000);
@@ -179,6 +212,31 @@ int main(int argc, char **argv){
 
 	optix_context=oc;
 
+
+	return 0;
+
+	glutInit(&argc, argv);
+
+	int	time0 = glutGet(GLUT_ELAPSED_TIME);
+	int time_total=0;
+
+	for(int i=0; i<16384; i++){
+		int tant = glutGet(GLUT_ELAPSED_TIME);
+		optix_context->launch(0, w, h);
+		optix_context["frame"]->setInt(++frame);
+		int tnow = glutGet(GLUT_ELAPSED_TIME);
+		time_total+=tnow-tant;
+		if(i%32==0 && i<=4096) screenshot(time_total);
+	}
+
+	int time1 = glutGet(GLUT_ELAPSED_TIME);
+
+	cout << time_total << endl;
+
+	screenshot(time_total);
+
+
+	/*
 	//init glut
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_DOUBLE);
@@ -195,5 +253,6 @@ int main(int argc, char **argv){
 	glutIdleFunc(renderScene);
 
 	glutMainLoop();
+	*/
 	return 0;
 }

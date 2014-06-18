@@ -20,7 +20,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 1
+#define MIN_DEPTH 3
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -45,7 +45,7 @@ rtDeclareVariable(float, focal_dist, , )=150.f;
 //frame number to make sure result is different every frame
 rtDeclareVariable(int, frame, , );
 //samples for stratified sampling
-rtDeclareVariable(int, sqrt_num_samples, , )=2;
+rtDeclareVariable(int, sqrt_num_samples, , )=1;
 
 //output buffer
 rtBuffer<float4, 2> output;
