@@ -12,6 +12,7 @@ struct PathResult{
 	float3 direction;
 	unsigned int depth;
 	unsigned int seed;
+	float prob;
 	bool count_emissive;
 	bool finished;
 };
@@ -20,7 +21,7 @@ struct ShadowResult{
 	bool in_shadow;
 };
 
-#define MIN_DEPTH 3
+#define MIN_DEPTH 5
 
 rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 rtDeclareVariable(optix::Ray, current_ray, rtCurrentRay, );
@@ -88,6 +89,7 @@ RT_PROGRAM void camera(){
 		ray_result.result=make_float4(0.f);
 		ray_result.seed=seed;
 		ray_result.finished=false;
+		ray_result.prob=1.f;
 
 		for(;;){
 
@@ -142,7 +144,7 @@ RT_PROGRAM void glossy_shading(){
 	//when first diffuse material is hit we stop counting emmisive contributions
 
 
-	current_path_result.count_emissive=false;
+	current_path_result.count_emissive=true;
 	//calculate diffuse and specular probabilities.
 	float4 diff_coef = Kd*tex2D(map_Kd, texCoord.x, texCoord.y);
 	float4 spec_coef = Ks*tex2D(map_Ks, texCoord.x, texCoord.y);
@@ -165,6 +167,13 @@ RT_PROGRAM void glossy_shading(){
 
 	}
 	else reflectance = 1.f;
+
+	float3 pkd = make_float3(diff_coef*current_path_result.atenuation);
+	float3 pks = make_float3(spec_coef*current_path_result.atenuation);
+
+	float pdiff=(pkd.x+pkd.y+pkd.z)*0.33333333333333333333333333333f;
+	float pspec=(pks.x+pks.y+pks.z)*0.33333333333333333333333333333f;
+	pspec*=fminf(1.f, optix::dot(-current_ray.direction, ffnormal)*(Ns+2.f)/(Ns+1.f));
 
 	for(int i=0; i<lights.size(); i++){
 		//sample light
@@ -216,19 +225,30 @@ RT_PROGRAM void glossy_shading(){
 				}
 				spec_intensity = powf(spec_intensity, Ns);
 				float4 spec_res = spec_coef * (Ns +2.f)* 0.5f * spec_intensity;
-				current_path_result.result += (diff_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f))) * 2.f * M_PIf;
+
+				float plight = radius / length(o);
+				plight*=plight;
+				plight=sqrtf(1.f-plight);
+				plight=2.f*M_PIf * (1.f - plight);
+				plight=1.f/plight;
+
+				float pbrdf = M_1_PIf * reflectance * (pdiff * intensity + pspec * (Ns+1.f) * 0.5f * powf(fmaxf(dot(optix::reflect(current_ray.direction, ffnormal), dir),0.f), Ns));
+				if(reflectance <1.f){
+					float pbtdf = M_1_PIf * (1.f-reflectance) * (pdiff * intensity + pspec * (Ns+1.f) * 0.5f * powf(fmaxf(dot(refracted, dir),0.f), Ns));
+					pbrdf+=pbtdf;
+				}
+
+				float weight = plight;
+				weight/=weight + pbrdf;
+
+				current_path_result.result += weight * ((diff_res+spec_res) * M_1_PIf * lights[i].color * intensity * current_path_result.atenuation * (1.f - sqrtf(1.f - powf(radius/length(position-center), 2.f))) * 2.f * M_PIf);
 			}
 		}
 	}
 
 
 
-	float3 pkd = make_float3(diff_coef*current_path_result.atenuation);
-	float3 pks = make_float3(spec_coef*current_path_result.atenuation);
 
-	float pdiff=(pkd.x+pkd.y+pkd.z)*0.33333333333333333333333333333f;
-	float pspec=(pks.x+pks.y+pks.z)*0.33333333333333333333333333333f;
-	pspec*=fminf(1.f, optix::dot(-current_ray.direction, ffnormal)*(Ns+2.f)/(Ns+1.f));
 
 	//randomly select the type of contribution
 	float r=rnd(current_path_result.seed);
@@ -255,6 +275,7 @@ RT_PROGRAM void glossy_shading(){
 				current_path_result.atenuation *= diff_coef/pdiff;
 				current_path_result.direction = dir;
 				current_path_result.position = position;
+				current_path_result.prob = reflectance * pdiff * dot(dir, ffnormal) * M_1_PIf;
 
 			}
 			//select specular sample
@@ -276,6 +297,7 @@ RT_PROGRAM void glossy_shading(){
 					current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
 					current_path_result.direction=dir;
 					current_path_result.position = position;
+					current_path_result.prob = reflectance * pspec * (Ns+1.f) * 0.5f * M_1_PIf * powf(dot(optix::reflect(current_ray.direction, ffnormal), dir), Ns);
 				}
 				else{
 					current_path_result.finished=true;
@@ -304,6 +326,7 @@ RT_PROGRAM void glossy_shading(){
 				current_path_result.atenuation *= diff_coef/pdiff;
 				current_path_result.direction = dir;
 				current_path_result.position = position;
+				current_path_result.prob = reflectance * pdiff * dot(dir, -ffnormal) * M_1_PIf;
 
 			}
 			//select specular sample
@@ -328,6 +351,7 @@ RT_PROGRAM void glossy_shading(){
 					current_path_result.atenuation*= ((Ns+2.f)/(Ns+1.f)) * (spec_coef/pspec) * intensity;
 					current_path_result.direction=dir;
 					current_path_result.position = position;
+					current_path_result.prob = reflectance * pspec * (Ns+1.f) * 0.5f * M_1_PIf * powf(dot(refracted, dir), Ns);
 				}
 				else{
 					current_path_result.finished=true;
@@ -357,7 +381,23 @@ RT_PROGRAM void shadow_probe(){
 }
 
 RT_PROGRAM void light_shading(){
-	if(current_path_result.count_emissive) current_path_result.result += light_color * current_path_result.atenuation;
+	if(current_path_result.depth==0) {
+		current_path_result.result += light.color * current_path_result.atenuation;
+		current_path_result.finished=true;
+		return;
+	}
+
+	float plight = light.pos.w / optix::length(current_ray.origin-make_float3(light.pos));
+	plight*=plight;
+	plight=sqrtf(1.f-plight);
+	plight=2.f*M_PIf * (1.f - plight);
+	plight=1.f/plight;
+
+	float weight = current_path_result.prob;
+	weight /= weight + plight;
+
+	current_path_result.result += light.color * current_path_result.atenuation * weight;
+
 	current_path_result.finished=true;
 }
 

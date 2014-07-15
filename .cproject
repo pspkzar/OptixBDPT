@@ -112,15 +112,15 @@
 					<ptx major="3" minor="0"/>
 				</executable>
 				<module id="1" path="path.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
 				<module id="3" path="mesh.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
 				<module id="4" path="sphere_light.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
-				<editor-arch major="1" minor="3"/>
+				<editor-arch major="3" minor="0"/>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
@@ -235,15 +235,15 @@
 					<ptx major="3" minor="0"/>
 				</executable>
 				<module id="1" path="path.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
 				<module id="3" path="mesh.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
 				<module id="5" path="sphere_light.ptx" type="ptx">
-					<ptx major="1" minor="3"/>
+					<ptx major="3" minor="0"/>
 				</module>
-				<editor-arch major="1" minor="3"/>
+				<editor-arch major="3" minor="0"/>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>

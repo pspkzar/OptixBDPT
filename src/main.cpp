@@ -200,6 +200,7 @@ int main(int argc, char **argv){
 	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
 
+
 	Group g = oc->createGroup();
 	g->setChildCount(2);
 	g->setChild(0, c.getMeshes());
@@ -213,7 +214,7 @@ int main(int argc, char **argv){
 	optix_context=oc;
 
 
-	return 0;
+	/*
 
 	glutInit(&argc, argv);
 
@@ -235,8 +236,8 @@ int main(int argc, char **argv){
 
 	screenshot(time_total);
 
+	*/
 
-	/*
 	//init glut
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA|GLUT_DOUBLE);
@@ -253,6 +254,6 @@ int main(int argc, char **argv){
 	glutIdleFunc(renderScene);
 
 	glutMainLoop();
-	*/
+
 	return 0;
 }

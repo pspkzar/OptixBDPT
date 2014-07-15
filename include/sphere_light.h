@@ -14,7 +14,7 @@
 
 rtBuffer<SphereLight> lights;
 
-rtDeclareVariable(float4, light_color, attribute light_color, );
+rtDeclareVariable(SphereLight, light, attribute light, );
 
 
 #endif /* SPHERE_LIGHT_H_ */

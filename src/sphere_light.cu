@@ -30,13 +30,13 @@ RT_PROGRAM void sphere_light_intersect(int primIdx){
 
 		if(rtPotentialIntersection(root1)){
 			//TODO define attributes
-			light_color = lights[primIdx].color;
+			light = lights[primIdx];
 			if(rtReportIntersection(0))
 				return;
 		}
 		float root2 = (-b + sdisc);
 		if(rtPotentialIntersection(root2)){
-			light_color = lights[primIdx].color;
+			light = lights[primIdx];
 			rtReportIntersection(0);
 		}
 	}
