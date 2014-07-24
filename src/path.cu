@@ -59,6 +59,9 @@ rtBuffer<LightPathResult, 3> lightPathBuffer;
 //output buffer
 rtBuffer<float4, 2> output;
 
+//contributions buffer
+rtBuffer<float4, 2> contributions;
+
 //top object to start tracing rays
 rtDeclareVariable(rtObject, top_object, , );
 

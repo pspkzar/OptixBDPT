@@ -204,6 +204,15 @@ int main(int argc, char **argv){
 	Buffer output = oc->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT4, w, h);
 	oc["output"]->set(output);
 
+	Buffer contributions = oc->createBuffer(RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT4, w, h);
+	{
+		float *c = (float*) contributions->map();
+		for(int i=0; i<w*h*4; i++)
+			c[i]=0.f;
+		contributions->unmap();
+	}
+	oc["contributions"]->set(contributions);
+
 	//set camera variables
 	oc["eye"]->setFloat(eye);
 
@@ -222,9 +231,6 @@ int main(int argc, char **argv){
 
 	oc->setStackSize(4000);
 	oc->setPrintEnabled(true);
-	oc->setPrintLaunchIndex(400,400);
-	oc->setPrintBufferSize(7995462);
-
 
 	Group g = oc->createGroup();
 	g->setChildCount(2);
