@@ -233,18 +233,14 @@ void OptixContext::loadMaterials() {
 	}
 }
 
-Acceleration OptixContext::newSBVH() {
-	return _context->createAcceleration("Sbvh", "Bvh");
-}
-
-Acceleration OptixContext::newBVH() {
-	return _context->createAcceleration("Bvh", "Bvh");
+Acceleration OptixContext::newAccel() {
+	return _context->createAcceleration("Trbvh", "Bvh");
 }
 
 void OptixContext::loadMeshes() {
 	_meshes=_context->createGeometryGroup();
 
-	Acceleration acc = newSBVH();
+	Acceleration acc = newAccel();
 	acc->setProperty("vertex_buffer_name","vertex_buffer");
 	acc->setProperty("vertex_buffer_stride","0");
 	acc->setProperty("index_buffer_name","index_buffer");

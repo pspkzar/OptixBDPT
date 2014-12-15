@@ -10,7 +10,7 @@
 #include <IL/il.h>
 #include <IL/ilu.h>
 
-#define STEP 0.2f
+#define STEP 2.f
 #define ANG_STEP 0.1f
 
 using namespace optix;
@@ -24,7 +24,7 @@ float3 eye=make_float3(0.f, 0.8f, 2.f);
 float3 up=make_float3(0.f,1.f,0.f);
 float3 W=make_float3(0.f, 0.f, -1.f);
 
-
+int time0;
 
 void reshape(int nw, int nh){
 	w=nw;
@@ -37,6 +37,7 @@ void reshape(int nw, int nh){
 }
 
 void renderScene(){
+
 	glClear(GL_COLOR_BUFFER_BIT);
 	optix_context->launch(0, w, h);
 	Buffer output = optix_context["output"]->getBuffer();
@@ -45,6 +46,10 @@ void renderScene(){
 	output->unmap();
 	optix_context["frame"]->setInt(++frame);
 	glutSwapBuffers();
+
+	int newtime = glutGet(GLUT_ELAPSED_TIME);
+	cout << newtime-time0 << endl;
+	time0=newtime;
 }
 
 void screenshot(int time){
@@ -252,7 +257,7 @@ int main(int argc, char **argv){
 	//TODO keyboard and mouse funcions to allow interactivity
 	glutKeyboardFunc(keyboard);
 	glutIdleFunc(renderScene);
-
+	time0=glutGet(GLUT_ELAPSED_TIME);
 	glutMainLoop();
 
 	return 0;

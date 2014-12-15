@@ -17,8 +17,7 @@ public:
 	optix::TextureSampler loadTextureRGBA(std::string &file);
 	optix::TextureSampler loadTextureLum(std::string &file);
 
-	optix::Acceleration newSBVH();
-	optix::Acceleration newBVH();
+	optix::Acceleration newAccel();
 
 	void setRayTypeCount(int nray_types);
 	void setClosestHitProgram(int ray_type, std::string file, std::string program);

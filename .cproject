@@ -21,7 +21,7 @@
 					<folderInfo id="com.nvidia.cuda.ide.configuration.debug.1508078239." name="/" resourcePath="">
 						<toolChain errorParsers="" id="com.nvidia.cuda.tools.toolchain.exe.debug.1574934247" name="CUDA Toolkit 6.0" nonInternalBuilderId="com.nvidia.cuda.ide.builder" superClass="com.nvidia.cuda.tools.toolchain.exe.debug">
 							<targetPlatform archList="all" binaryParser="com.nvidia.cuda.ide.elf;com.nvidia.cuda.ide.macho;com.nvidia.cuda.ide.cubin" id="com.nvidia.cuda.ide.targetPlatform.2082829886" isAbstract="false" name="Debug Platform" osList="linux,macosx" superClass="com.nvidia.cuda.ide.targetPlatform"/>
-							<builder buildPath="${workspace_loc:/OptixBDPT}/Debug" id="com.nvidia.cuda.ide.builder.1292383729" incrementalBuildTarget="all path.ptx mesh.ptx sphere_light.ptx" keepEnvironmentInBuildfile="false" name="CUDA Toolkit 6.0 Builder" parallelBuildOn="true" parallelizationNumber="optimal" stopOnErr="false" superClass="com.nvidia.cuda.ide.builder"/>
+							<builder arguments="path.ptx mesh.ptx sphere_light.ptx" buildPath="${workspace_loc:/OptixBDPT}/Debug" command="make" id="com.nvidia.cuda.ide.builder.1292383729" incrementalBuildTarget="all path.ptx mesh.ptx sphere_light.ptx" keepEnvironmentInBuildfile="false" name="CUDA Toolkit 6.0 Builder" parallelBuildOn="true" parallelizationNumber="optimal" stopOnErr="false" superClass="com.nvidia.cuda.ide.builder"/>
 							<tool command="nvcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX} ${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.VCErrorParser;nvcc.errorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.971005232" name="NVCC Compiler" superClass="nvcc.compiler.base">
 								<option id="nvcc.compiler.deviceDebug.103588667" name="Generate device debug information (-G)" superClass="nvcc.compiler.deviceDebug" value="false" valueType="boolean"/>
 								<option id="nvcc.compiler.option.level.1133951411" name="Generate host debug information (-g)" superClass="nvcc.compiler.option.level" value="false" valueType="boolean"/>
@@ -30,6 +30,7 @@
 								<option id="nvcc.compiler.usefastmath.1958270173" name="Make use of fast math library (-use_fast_math)" superClass="nvcc.compiler.usefastmath" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.include.paths.1175161402" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/optix/include"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/GIKIT/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/include&quot;"/>
 								</option>
 								<inputType id="nvcc.compiler.input.cu.1481433324" superClass="nvcc.compiler.input.cu"/>
@@ -153,6 +154,7 @@
 								<option id="nvcc.compiler.usefastmath.938719292" name="Make use of fast math library (-use_fast_math)" superClass="nvcc.compiler.usefastmath" value="true" valueType="boolean"/>
 								<option id="nvcc.compiler.include.paths.1838744969" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/opt/optix/include"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/GIKIT/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/include&quot;"/>
 								</option>
 								<inputType id="nvcc.compiler.input.cu.573870295" superClass="nvcc.compiler.input.cu"/>
@@ -185,17 +187,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.363801491" name="path.cu" rcbsApplicability="disable" resourcePath="src/path.cu" toolsToInvoke="nvcc.compiler.base.770353483.1215956839">
-						<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.770353483.1215956839" name="NVCC Compiler" superClass="nvcc.compiler.base.770353483">
-							<option id="nvcc.compiler.modules.149120238" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
-								<listOptionValue builtIn="false" value="1"/>
-							</option>
-							<option id="nvcc.compiler.isintarget.1712658604" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
-							<inputType id="nvcc.compiler.input.cu.1898453794" superClass="nvcc.compiler.input.cu"/>
-							<inputType id="nvcc.compiler.input.cpp.2011365792" superClass="nvcc.compiler.input.cpp"/>
-							<inputType id="nvcc.compiler.input.c.1892012646" superClass="nvcc.compiler.input.c"/>
-						</tool>
-					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1188262457" name="mesh.cu" rcbsApplicability="disable" resourcePath="src/mesh.cu" toolsToInvoke="nvcc.compiler.base.770353483.129372788">
 						<tool id="nvcc.compiler.base.770353483.129372788" name="NVCC Compiler" superClass="nvcc.compiler.base.770353483">
 							<option id="nvcc.compiler.modules.1912291416" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
@@ -205,6 +196,17 @@
 							<inputType id="nvcc.compiler.input.cu.449383731" superClass="nvcc.compiler.input.cu"/>
 							<inputType id="nvcc.compiler.input.cpp.444248397" superClass="nvcc.compiler.input.cpp"/>
 							<inputType id="nvcc.compiler.input.c.1330171049" superClass="nvcc.compiler.input.c"/>
+						</tool>
+					</fileInfo>
+					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.363801491" name="path.cu" rcbsApplicability="disable" resourcePath="src/path.cu" toolsToInvoke="nvcc.compiler.base.770353483.1215956839">
+						<tool errorParsers="nvcc.errorParser;org.eclipse.cdt.core.VCErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="nvcc.compiler.base.770353483.1215956839" name="NVCC Compiler" superClass="nvcc.compiler.base.770353483">
+							<option id="nvcc.compiler.modules.149120238" name="File modules" superClass="nvcc.compiler.modules" valueType="stringList">
+								<listOptionValue builtIn="false" value="1"/>
+							</option>
+							<option id="nvcc.compiler.isintarget.1712658604" name="Include resource in primary project output" superClass="nvcc.compiler.isintarget" value="false" valueType="boolean"/>
+							<inputType id="nvcc.compiler.input.cu.1898453794" superClass="nvcc.compiler.input.cu"/>
+							<inputType id="nvcc.compiler.input.cpp.2011365792" superClass="nvcc.compiler.input.cpp"/>
+							<inputType id="nvcc.compiler.input.c.1892012646" superClass="nvcc.compiler.input.c"/>
 						</tool>
 					</fileInfo>
 					<fileInfo id="com.nvidia.cuda.ide.configuration.release.1460815459.1799299643" name="sphere_light.cu" rcbsApplicability="disable" resourcePath="src/sphere_light.cu" toolsToInvoke="nvcc.compiler.base.770353483.788568551">
@@ -278,10 +280,10 @@
 		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.release.1460815459;com.nvidia.cuda.ide.configuration.release.1460815459.;nvcc.compiler.base.770353483;nvcc.compiler.input.cpp.2104496993">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.nvidia.cuda.ide.build.NVCCPerProjectProfile"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.debug.1508078239;com.nvidia.cuda.ide.configuration.debug.1508078239.;nvcc.compiler.base.971005232;nvcc.compiler.input.cpp.2045477242">
+		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.release.1460815459;com.nvidia.cuda.ide.configuration.release.1460815459.;nvcc.compiler.base.770353483;nvcc.compiler.input.c.608258319">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.nvidia.cuda.ide.build.NVCCPerProjectProfile"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.release.1460815459;com.nvidia.cuda.ide.configuration.release.1460815459.;nvcc.compiler.base.770353483;nvcc.compiler.input.c.608258319">
+		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.debug.1508078239;com.nvidia.cuda.ide.configuration.debug.1508078239.;nvcc.compiler.base.971005232;nvcc.compiler.input.cpp.2045477242">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.nvidia.cuda.ide.build.NVCCPerProjectProfile"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="com.nvidia.cuda.ide.configuration.release.1460815459">
