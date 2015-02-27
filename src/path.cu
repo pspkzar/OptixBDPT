@@ -225,7 +225,7 @@ RT_PROGRAM void glossy_shading(){
 	float pdf=bsdf.sample(current_ray.direction, shading_normal, out, r, sample);
 
 	if(pdf>0.f){
-		current_path_result.atenuation*=r;
+		current_path_result.atenuation*=r/pdf;
 		current_path_result.direction=out;
 		current_path_result.position=position;
 		current_path_result.prob=pdf;
