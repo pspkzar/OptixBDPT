@@ -12,7 +12,8 @@ rtDeclareVariable(float, Ni, , );
 rtTextureSampler<float4, 2> map_Kd;
 rtTextureSampler<float4, 2> map_Ks;
 
-rtTextureSampler<float, 2> map_bump;
+rtTextureSampler<float4, 2> map_bump;
+rtDeclareVariable(int, has_bump, ,);
 
 
 #endif /* MATERIAL_H_ */

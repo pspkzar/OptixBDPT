@@ -109,19 +109,17 @@
 			</storageModule>
 			<storageModule moduleId="com.nvidia.cuda.ide.build.project.ICudaProjectConfiguration">
 				<executable devicelink="false">
-					<sass major="3" minor="0"/>
-					<ptx major="3" minor="0"/>
 				</executable>
 				<module id="1" path="path.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
 				<module id="3" path="mesh.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
 				<module id="4" path="sphere_light.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
-				<editor-arch major="3" minor="0"/>
+				<editor-arch major="2" minor="0"/>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
@@ -233,19 +231,17 @@
 			</storageModule>
 			<storageModule moduleId="com.nvidia.cuda.ide.build.project.ICudaProjectConfiguration">
 				<executable devicelink="false">
-					<sass major="3" minor="0"/>
-					<ptx major="3" minor="0"/>
 				</executable>
 				<module id="1" path="path.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
 				<module id="3" path="mesh.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
 				<module id="5" path="sphere_light.ptx" type="ptx">
-					<ptx major="3" minor="0"/>
+					<ptx major="2" minor="0"/>
 				</module>
-				<editor-arch major="3" minor="0"/>
+				<editor-arch major="2" minor="0"/>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>

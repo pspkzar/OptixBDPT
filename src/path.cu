@@ -5,6 +5,7 @@
 #include "BSDF.h"
 
 using namespace optix;
+using namespace rt;
 
 struct PathResult{
 	float4 result;
@@ -158,7 +159,19 @@ RT_PROGRAM void glossy_shading(){
 	bsdf.Ni=Ni;
 	bsdf.Ns=Ns;
 
-	float3 ffnormal = optix::faceforward(shading_normal, -current_ray.direction, shading_normal);
+	float3 bump_normal = shading_normal;
+	if(has_bump){
+		float4 mapB = tex2D(map_bump, texCoord.x, texCoord.y);
+//		current_path_result.result = mapB;
+//
+		mapB = 2*mapB-1;
+		bump_normal = mapB.x * tangent + mapB.y * bitangent + mapB.z * shading_normal;
+		bump_normal = normalize(bump_normal);
+	}
+//	current_path_result.finished=true;
+//	return;
+
+	float3 ffnormal = optix::faceforward(bump_normal, -current_ray.direction, bump_normal);
 
 	for(int i=0; i<lights.size(); i++){
 		//sample light
@@ -178,7 +191,7 @@ RT_PROGRAM void glossy_shading(){
 
 		float3 dir = u * cosf(phi) * sin_a + v * sinf(phi) * sin_a + w * cos_a;
 		float4 r;
-		float pdf = bsdf.evaluate(current_ray.direction, shading_normal, dir, r);
+		float pdf = bsdf.evaluate(current_ray.direction, bump_normal, dir, r);
 
 		if(pdf>0.f){
 
@@ -222,7 +235,7 @@ RT_PROGRAM void glossy_shading(){
 	float4 r;
 	float3 out;
 
-	float pdf=bsdf.sample(current_ray.direction, shading_normal, out, r, sample);
+	float pdf=bsdf.sample(current_ray.direction, bump_normal, out, r, sample);
 
 	if(pdf>0.f){
 		current_path_result.atenuation*=r/pdf;

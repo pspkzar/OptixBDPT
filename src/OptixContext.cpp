@@ -181,7 +181,6 @@ void OptixContext::loadMaterials() {
 		aiGetMaterialColor(mat, AI_MATKEY_COLOR_DIFFUSE, &diffuse);
 		optix_mat["Kd"]->setFloat(diffuse.r, diffuse.b, diffuse.g, diffuse.a);
 
-
 		aiColor4D specular;
 		aiGetMaterialColor(mat, AI_MATKEY_COLOR_SPECULAR, &specular);
 		optix_mat["Ks"]->setFloat(specular.r, specular.b, specular.g, specular.a);
@@ -220,11 +219,13 @@ void OptixContext::loadMaterials() {
 		aiString bumpTexPath;
 		if(AI_SUCCESS==mat->GetTexture(aiTextureType_HEIGHT, 0, &bumpTexPath)){
 			string tex_path=_working_directory+string(bumpTexPath.data);
-			TextureSampler bumpTex = loadTextureLum(tex_path);
+			TextureSampler bumpTex = loadTextureRGBA(tex_path);
 			optix_mat["map_bump"]->setTextureSampler(bumpTex);
+			optix_mat["has_bump"]->setInt(1);
 		}
 		else{
-			optix_mat["map_bump"]->setTextureSampler(noBumpTex);
+			optix_mat["map_bump"]->setTextureSampler(whiteRGBA);
+			optix_mat["has_bump"]->setInt(0);
 		}
 
 		optix_mat->validate();
@@ -343,7 +344,6 @@ void OptixContext::loadMeshes() {
 		instance->setGeometry(optix_mesh);
 		instance->setMaterialCount(1);
 		instance->setMaterial(0, _materials[mname]);
-		instance["bump"]->set(_materials[mname]["map_bump"]->getTextureSampler());
 
 		_meshes->setChild(i, instance);
 	}
